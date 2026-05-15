@@ -13,8 +13,9 @@ import PillToggle from '../components/primitives/PillToggle';
 import CorridorSchematic from '../components/corridor/CorridorSchematic';
 import CorridorMap from '../components/corridor/CorridorMap';
 import CorridorConditions from '../components/corridor/CorridorConditions';
-import HealthTrendChart from '../components/corridor/HealthTrendChart';
-import IntelligencePanel from '../components/intelligence/IntelligencePanel';
+import HealthTrendChart      from '../components/corridor/HealthTrendChart';
+import ThroughputForecast    from '../components/corridor/ThroughputForecast';
+import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 
 const MODE_OPTIONS = [
   { value: 'schematic', label: 'Schematic' },
@@ -90,6 +91,13 @@ export default function Corridor() {
       <div style={{ marginTop: 'var(--space-4)' }}>
         <HealthTrendChart history={data?.health_history} />
       </div>
+
+      {/* Phase 172 — 4-week corridor throughput forecast */}
+      {data?.throughput_forecast?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <ThroughputForecast throughputForecast={data.throughput_forecast} />
+        </div>
+      )}
 
       <div style={{ marginTop: 'var(--space-4)' }}>
         <IntelligencePanel page="corridor" />

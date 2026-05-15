@@ -158,9 +158,46 @@ router.get('/', requireAuth, (req, res) => {
 
   const allConvoys = [...liveEnriched, ...mockEnriched];
 
+  // Phase 171 — per-hauler cycle time metrics. Groups convoys by hauler_id
+  // and aggregates the cycle_h field (total round-trip hours). Convoys without
+  // a cycle_h are excluded from the average but counted in the total.
+  const cycleByHauler = {};
+  allConvoys.forEach((c) => {
+    if (!cycleByHauler[c.hauler_id]) {
+      cycleByHauler[c.hauler_id] = {
+        hauler_id:     c.hauler_id,
+        hauler_display: c.hauler_display_name ?? c.hauler_id,
+        total_convoys: 0,
+        on_schedule:   0,
+        cycle_vals:    [],
+      };
+    }
+    const h = cycleByHauler[c.hauler_id];
+    h.total_convoys++;
+    if (c.on_schedule) h.on_schedule++;
+    if (c.cycle_h != null) h.cycle_vals.push(c.cycle_h);
+  });
+  const hauler_cycle_metrics = Object.values(cycleByHauler)
+    .map((h) => ({
+      hauler_id:      h.hauler_id,
+      hauler_display: h.hauler_display,
+      total_convoys:  h.total_convoys,
+      on_schedule:    h.on_schedule,
+      on_schedule_pct: h.total_convoys > 0
+        ? Number(((h.on_schedule / h.total_convoys) * 100).toFixed(0))
+        : null,
+      avg_cycle_h: h.cycle_vals.length > 0
+        ? Number((h.cycle_vals.reduce((s, v) => s + v, 0) / h.cycle_vals.length).toFixed(1))
+        : null,
+      min_cycle_h: h.cycle_vals.length > 0 ? Math.min(...h.cycle_vals) : null,
+      max_cycle_h: h.cycle_vals.length > 0 ? Math.max(...h.cycle_vals) : null,
+    }))
+    .sort((a, b) => (a.avg_cycle_h ?? 999) - (b.avg_cycle_h ?? 999));
+
   res.json({
     summary: buildSummary(allConvoys),
     convoys:  allConvoys,
+    hauler_cycle_metrics,
   });
 });
 

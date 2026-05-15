@@ -17,12 +17,13 @@ import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 
 import PageShell from '../components/layout/PageShell';
-import ConvoysSummary from '../components/convoys/ConvoysSummary';
-import ConvoyCorridorStrip from '../components/convoys/ConvoyCorridorStrip';
-import ConvoyETABoard from '../components/convoys/ConvoyETABoard';
-import ConvoyTable from '../components/convoys/ConvoyTable';
-import ConvoyDetail from '../components/convoys/ConvoyDetail';
-import IntelligencePanel from '../components/intelligence/IntelligencePanel';
+import ConvoysSummary      from '../components/convoys/ConvoysSummary';
+import ConvoyCorridorStrip  from '../components/convoys/ConvoyCorridorStrip';
+import ConvoyETABoard       from '../components/convoys/ConvoyETABoard';
+import ConvoyTable          from '../components/convoys/ConvoyTable';
+import ConvoyDetail         from '../components/convoys/ConvoyDetail';
+import ConvoyCycleMetrics   from '../components/convoys/ConvoyCycleMetrics';
+import IntelligencePanel    from '../components/intelligence/IntelligencePanel';
 
 const PHASE_OPTIONS = [
   ['', 'All phases'],
@@ -525,6 +526,11 @@ export default function Convoys() {
           onRowClick={(c) => setSelectedId(c.id)}
           onUpdate={load}
         />
+
+        {/* Phase 171 — per-hauler convoy cycle time breakdown */}
+        {data?.hauler_cycle_metrics?.length > 0 && (
+          <ConvoyCycleMetrics haulerCycleMetrics={data.hauler_cycle_metrics} />
+        )}
 
         <IntelligencePanel page="convoys" />
       </div>

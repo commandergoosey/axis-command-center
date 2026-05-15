@@ -70,6 +70,36 @@ router.get('/', (_req, res) => {
     });
   }
 
+  // Phase 172 — 4-week corridor throughput forecast: base / optimistic / conservative.
+  // Anchored to the most recent week's corridor health score as a proxy for
+  // throughput capacity. MODELLED — seeded for demo stability.
+  function seededCorr(n) {
+    const raw = Math.sin(n * 8221 + 67) * 183_017;
+    return raw - Math.floor(raw);
+  }
+  const WEEKLY_BASE_TONNES = 8_400;     // baseline corridor capacity
+  const lastScore = health_history[health_history.length - 1]?.score ?? 72;
+  const capacityFactor = lastScore / 100;              // 0–1 scalar
+  const nowForForecast = new Date();
+  const throughput_forecast = [];
+  for (let w = 1; w <= 4; w++) {
+    const weekMs = Date.now() + w * 7 * 86_400_000;
+    const monday = new Date(weekMs);
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    monday.setUTCHours(0, 0, 0, 0);
+    const label  = monday.toISOString().slice(0, 10);
+    const wk     = Math.round(weekMs / (7 * 86_400_000));
+    const noise  = (seededCorr(wk) - 0.5) * 0.08;    // ±4%
+    const base   = Math.round(WEEKLY_BASE_TONNES * capacityFactor * (1 + noise));
+    throughput_forecast.push({
+      week:         label,
+      base_tonnes:         base,
+      optimistic_tonnes:   Math.round(base * (1 + 0.08 + seededCorr(wk + 100) * 0.04)),
+      conservative_tonnes: Math.round(base * (1 - 0.08 - seededCorr(wk + 200) * 0.04)),
+      modelled: true,
+    });
+  }
+
   res.json({
     corridor: {
       name:         'Nyinahin–Takoradi',
@@ -81,6 +111,7 @@ router.get('/', (_req, res) => {
     conditions:    { ...CONDITIONS, advisories: mergedAdvisories },
     active_convoys: activeConvoys,
     health_history,
+    throughput_forecast,
   });
 });
 

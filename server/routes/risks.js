@@ -49,10 +49,48 @@ router.get('/', requireAuth, (_req, res) => {
     })),
   }));
 
+  // Phase 170 — 8-week risk exposure score trend. Each week's score is a
+  // weighted sum of severity × likelihood for all open risks at that point in
+  // time. The current week uses the live register; prior 7 weeks are seeded
+  // deterministically so the trend is stable across requests. MODELLED.
+  function seededRisk(n) {
+    const raw = Math.sin(n * 6143 + 53) * 107_159;
+    return raw - Math.floor(raw);
+  }
+  const SEV_W  = { low: 1, medium: 2, high: 4, critical: 8 };
+  const LIKE_W = { rare: 1, unlikely: 2, possible: 3, likely: 4, almost_certain: 5 };
+  const currentExposure = openRisks.reduce(
+    (s, r) => s + (SEV_W[r.severity] ?? 1) * (LIKE_W[r.likelihood] ?? 1),
+    0,
+  );
+  // Scale to 0-100 using a soft ceiling of 80 raw score points.
+  const scaleScore = (raw) => Math.min(100, Math.round((raw / 80) * 100));
+  const nowMs = Date.now();
+  const exposure_trend = [];
+  for (let w = 7; w >= 0; w--) {
+    const weekMs   = nowMs - w * 7 * 86_400_000;
+    const monday   = new Date(weekMs);
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    monday.setUTCHours(0, 0, 0, 0);
+    const label    = monday.toISOString().slice(0, 10);
+    const wk       = Math.round(weekMs / (7 * 86_400_000)); // stable int seed
+    const rawScore = w === 0
+      ? currentExposure
+      : Math.round(currentExposure * (0.60 + seededRisk(wk) * 0.80));
+    const score    = scaleScore(rawScore);
+    exposure_trend.push({
+      week:     label,
+      score,
+      is_current: w === 0,
+      modelled:   w > 0,
+    });
+  }
+
   res.json({
     risks,
     counts: riskRegister.counts(),
     matrix,
+    exposure_trend,
   });
 });
 

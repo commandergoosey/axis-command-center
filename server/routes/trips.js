@@ -106,6 +106,46 @@ router.get('/', (req, res) => {
       delay_rate_pct:     w.trips > 0 ? Number(((w.delayed / w.trips) * 100).toFixed(1)) : 0,
     }));
 
+  // Phase 169 — per-hauler trip performance summary.
+  // Groups the full (unfiltered) TRIPS set by hauler_id so the summary
+  // strip shows all haulers regardless of the active hauler filter.
+  const byHauler = {};
+  TRIPS.forEach((t) => {
+    if (!byHauler[t.hauler_id]) {
+      byHauler[t.hauler_id] = {
+        hauler_id:       t.hauler_id,
+        hauler_display:  haulersById[t.hauler_id] ?? t.hauler_id,
+        trips:           0,
+        tonnes:          0,
+        cost_total_usd:  0,
+        revenue_usd:     0,
+        delay_min_total: 0,
+        delayed_count:   0,
+      };
+    }
+    const h = byHauler[t.hauler_id];
+    h.trips           += 1;
+    h.tonnes          += t.tonnage_t ?? 0;
+    h.cost_total_usd  += t.cost?.total_usd ?? 0;
+    h.revenue_usd     += t.revenue_usd ?? 0;
+    h.delay_min_total += t.delay_min ?? 0;
+    if ((t.delay_min ?? 0) > 0) h.delayed_count += 1;
+  });
+  const hauler_summary = Object.values(byHauler)
+    .map((h) => ({
+      hauler_id:          h.hauler_id,
+      hauler_display:     h.hauler_display,
+      trips:              h.trips,
+      tonnes:             h.tonnes,
+      avg_cost_per_tonne: h.tonnes > 0 ? Number((h.cost_total_usd / h.tonnes).toFixed(2)) : null,
+      avg_delay_min:      h.trips  > 0 ? Number((h.delay_min_total / h.trips).toFixed(1)) : 0,
+      margin_usd:         Number((h.revenue_usd - h.cost_total_usd).toFixed(0)),
+      margin_pct:         h.revenue_usd > 0
+        ? Number(((h.revenue_usd - h.cost_total_usd) / h.revenue_usd * 100).toFixed(1))
+        : null,
+    }))
+    .sort((a, b) => b.trips - a.trips);
+
   res.json({
     count: liveTrips.length + filtered.length,
     hauler_id: haulerId,
@@ -113,6 +153,7 @@ router.get('/', (req, res) => {
     cost_per_route: Object.values(byRoute).sort((a, b) => b.trips - a.trips),
     delay_heatmap: delayHeatmap(filtered),
     cost_trend,
+    hauler_summary,
   });
 });
 

@@ -14,8 +14,9 @@ import { useAuth } from '../lib/AuthContext';
 import PageShell from '../components/layout/PageShell';
 import Button from '../components/primitives/Button';
 import StatusBadge from '../components/primitives/StatusBadge';
-import DriverDetail from '../components/drivers/DriverDetail';
-import IntelligencePanel from '../components/intelligence/IntelligencePanel';
+import DriverDetail             from '../components/drivers/DriverDetail';
+import DriverHoursDistribution  from '../components/drivers/DriverHoursDistribution';
+import IntelligencePanel        from '../components/intelligence/IntelligencePanel';
 
 const REST_LABEL = {
   compliant: 'Compliant',
@@ -145,6 +146,13 @@ export default function Drivers() {
           showHauler={!isHaulerAdmin}
           onRowClick={(d) => setSelectedId(d.id)}
         />
+      )}
+
+      {/* Phase 173 — driver HOS weekly hours distribution */}
+      {drivers.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <DriverHoursDistribution drivers={drivers} />
+        </div>
       )}
 
       <div style={{ marginTop: 'var(--space-4)' }}>
