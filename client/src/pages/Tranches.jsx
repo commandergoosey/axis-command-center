@@ -10,10 +10,11 @@ import { authFetch } from '../lib/auth';
 
 import { useEffect, useState, useCallback } from 'react';
 import PageShell from '../components/layout/PageShell';
-import ProgrammeStrip  from '../components/tranche/ProgrammeStrip';
-import TrancheTimeline from '../components/tranche/TrancheTimeline';
-import GateChecklist   from '../components/tranche/GateChecklist';
-import IntelligencePanel from '../components/intelligence/IntelligencePanel';
+import ProgrammeStrip       from '../components/tranche/ProgrammeStrip';
+import TrancheTimeline      from '../components/tranche/TrancheTimeline';
+import GateChecklist        from '../components/tranche/GateChecklist';
+import CapitalDrawdownChart from '../components/tranche/CapitalDrawdownChart';
+import IntelligencePanel    from '../components/intelligence/IntelligencePanel';
 
 export default function Tranches() {
   const [data, setData]           = useState(null);
@@ -59,6 +60,12 @@ export default function Tranches() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <ProgrammeStrip programme={data?.programme} capital={data?.capital} />
+
+        {/* Phase 177 — capital drawdown chart */}
+        {data?.capital?.series?.length > 0 && (
+          <CapitalDrawdownChart capital={data.capital} />
+        )}
+
         <TrancheTimeline
           tranches={data?.tranches ?? []}
           selectedId={selectedId}

@@ -80,6 +80,43 @@ router.get('/pipeline', requireAuth, (req, res) => {
       };
     });
 
+  // Phase 176 — 8-week coaching session volume trend.
+  // Current week uses live session data; prior 7 weeks are seeded. MODELLED.
+  function seededCoach(n) {
+    const raw = Math.sin(n * 6571 + 59) * 113_003;
+    return raw - Math.floor(raw);
+  }
+  const currentTierCounts = {};
+  TIER_ORDER.forEach((t) => { currentTierCounts[t] = cohorts[t]?.sessions ?? 0; });
+  const currentWeekTotal = Object.values(currentTierCounts).reduce((s, v) => s + v, 0);
+  const session_trend = [];
+  for (let w = 7; w >= 0; w--) {
+    const weekMs = Date.now() - w * 7 * 86_400_000;
+    const monday = new Date(weekMs);
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    monday.setUTCHours(0, 0, 0, 0);
+    const label = monday.toISOString().slice(0, 10);
+    const wk    = Math.round(weekMs / (7 * 86_400_000));
+    const entry = { week: label, is_current: w === 0, modelled: w > 0 };
+    if (w === 0) {
+      TIER_ORDER.forEach((t) => { entry[t] = currentTierCounts[t]; });
+      entry.total        = currentWeekTotal;
+      entry.completion_pct = currentWeekTotal > 0
+        ? Math.min(100, Math.round(currentWeekTotal / Math.max(1, (data.pipeline?.length ?? 4)) * 100))
+        : 0;
+    } else {
+      const total = Math.round(2 + seededCoach(wk) * 8);
+      entry.urgent  = Math.round(seededCoach(wk + 10) * 1.5);
+      entry.high    = Math.round(seededCoach(wk + 20) * 2.5);
+      entry.medium  = Math.round(seededCoach(wk + 30) * 2.5);
+      entry.routine = Math.max(0, total - entry.urgent - entry.high - entry.medium);
+      entry.total   = total;
+      entry.completion_pct = Math.round(55 + seededCoach(wk + 50) * 35);
+    }
+    session_trend.push(entry);
+  }
+  data.session_trend = session_trend;
+
   res.json(data);
 });
 

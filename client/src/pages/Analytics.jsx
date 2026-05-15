@@ -26,8 +26,10 @@ import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2 } from 'lu
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
-import HaulerThroughputChart  from '../components/analytics/HaulerThroughputChart';
-import WeekdayPatternChart    from '../components/analytics/WeekdayPatternChart';
+import HaulerThroughputChart   from '../components/analytics/HaulerThroughputChart';
+import WeekdayPatternChart     from '../components/analytics/WeekdayPatternChart';
+import FuelEfficiencyBenchmark from '../components/analytics/FuelEfficiencyBenchmark';
+import IntelligencePanel       from '../components/intelligence/IntelligencePanel';
 
 /* ── Token colours (CSS vars resolved at runtime) ─────────────────── */
 const C_RUST   = 'var(--bauxite-rust)';
@@ -423,6 +425,13 @@ export default function Analytics() {
 
         {/* ── Phase 165: Weekday throughput pattern ─────────────── */}
         <WeekdayPatternChart weekdayPattern={data?.weekday_pattern} />
+
+        {/* ── Phase 178: Fuel efficiency vs throughput benchmark ─── */}
+        {data?.efficiency_benchmark?.length > 0 && (
+          <FuelEfficiencyBenchmark efficiencyBenchmark={data.efficiency_benchmark} />
+        )}
+
+        <IntelligencePanel page="analytics" />
 
       </div>
     </PageShell>

@@ -17,10 +17,11 @@ import { useAuth } from '../lib/AuthContext';
 import PageShell from '../components/layout/PageShell';
 import Button from '../components/primitives/Button';
 import StatusBadge from '../components/primitives/StatusBadge';
-import WorkorderDetail from '../components/maintenance/WorkorderDetail';
+import WorkorderDetail         from '../components/maintenance/WorkorderDetail';
 import MaintenanceSchedulePanel from '../components/maintenance/MaintenanceSchedulePanel';
-import IntervalTrackerStrip from '../components/maintenance/IntervalTrackerStrip';
-import IntelligencePanel from '../components/intelligence/IntelligencePanel';
+import IntervalTrackerStrip     from '../components/maintenance/IntervalTrackerStrip';
+import MaintenanceCostTrend     from '../components/maintenance/MaintenanceCostTrend';
+import IntelligencePanel        from '../components/intelligence/IntelligencePanel';
 import { formatKm, formatUsd } from '../lib/format';
 
 export default function Maintenance() {
@@ -105,6 +106,10 @@ export default function Maintenance() {
             showHauler={showHauler}
             onRowClick={(r) => setSelectedRigId(r.rig_id)}
           />
+          {/* Phase 175 — 8-week maintenance cost trend */}
+          {state.data?.cost_trend && (
+            <MaintenanceCostTrend costTrend={state.data.cost_trend} />
+          )}
           <IntelligencePanel page="maintenance" />
         </div>
       )}

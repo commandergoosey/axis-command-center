@@ -3,11 +3,12 @@ import { authFetch, can } from '../lib/auth';
 import { Plus, Columns3 } from 'lucide-react';
 
 import PageShell from '../components/layout/PageShell';
-import HaulerTable from '../components/hauler/HaulerTable';
-import HaulerDetail from '../components/hauler/HaulerDetail';
-import HaulerCompare from '../components/hauler/HaulerCompare';
-import OnboardHaulerModal from '../components/hauler/OnboardHaulerModal';
-import IntelligencePanel from '../components/intelligence/IntelligencePanel';
+import HaulerTable          from '../components/hauler/HaulerTable';
+import HaulerDetail          from '../components/hauler/HaulerDetail';
+import HaulerCompare         from '../components/hauler/HaulerCompare';
+import HaulerFleetShareChart from '../components/hauler/HaulerFleetShareChart';
+import OnboardHaulerModal    from '../components/hauler/OnboardHaulerModal';
+import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 import Button from '../components/primitives/Button';
 import { useAuth } from '../lib/AuthContext';
 
@@ -79,6 +80,13 @@ export default function Haulers() {
     >
       <SummaryStrip totals={totals} haulers={haulers} />
       <LiveHaulerStrip haulers={haulers} />
+
+      {/* Phase 174 — fleet composition share chart */}
+      {haulers.length > 0 && (
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <HaulerFleetShareChart haulers={haulers} />
+        </div>
+      )}
 
       {state.status === 'loading' && <LoadingBlock />}
       {state.status === 'error' && <ErrorBlock message={state.error} onRetry={load} />}

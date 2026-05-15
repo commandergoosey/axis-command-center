@@ -20,6 +20,8 @@ const analytics    = require('../services/corridorAnalytics');
 const convoyState  = require('../state/convoyState');
 const roster       = require('../state/roster');
 const { aggregate } = require('../services/aggregator');
+const { FLEET }    = require('../mock/fleet');
+const { TRIPS }    = require('../mock/trips');
 
 router.get('/', (req, res) => {
   try {
@@ -92,7 +94,47 @@ router.get('/', (req, res) => {
       avg_tonnes: dayCounts[i] > 0 ? Math.round(dayTotals[i] / dayCounts[i]) : 0,
     }));
 
-    res.json({ ...base, today_live, hauler_attainment, weekday_pattern });
+    // Phase 178 — per-hauler fuel efficiency benchmark (ScatterChart data).
+    // x: avg L/100km (from FLEET by hauler), y: avg weekly trips (from TRIPS),
+    // size: truck_count. Shows efficiency vs throughput trade-off per hauler.
+    const fleetByHauler = {};
+    FLEET.forEach((f) => {
+      if (!fleetByHauler[f.hauler_id]) fleetByHauler[f.hauler_id] = { sum_eff: 0, count: 0 };
+      const eff = f.efficiency_l_per_100km ?? 0;
+      if (eff > 0) { fleetByHauler[f.hauler_id].sum_eff += eff; fleetByHauler[f.hauler_id].count++; }
+    });
+    const tripsByHauler = {};
+    TRIPS.forEach((t) => {
+      if (!tripsByHauler[t.hauler_id]) tripsByHauler[t.hauler_id] = { sum: 0, weeks: new Set() };
+      const d = new Date(t.departed_at ?? t.completed_at ?? 0);
+      const mon = new Date(d); mon.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); mon.setUTCHours(0,0,0,0);
+      tripsByHauler[t.hauler_id].weeks.add(mon.toISOString().slice(0, 10));
+      tripsByHauler[t.hauler_id].sum++;
+    });
+    let efficiency_benchmark = null;
+    try {
+      const agg2 = aggregate(roster.list(), new Date());
+      efficiency_benchmark = agg2.haulers
+        .filter((h) => h.status === 'active')
+        .map((h) => {
+          const fe = fleetByHauler[h.id];
+          const te = tripsByHauler[h.id];
+          const avg_l_per_100km = fe && fe.count > 0
+            ? Number((fe.sum_eff / fe.count).toFixed(1)) : null;
+          const avg_trips_per_week = te && te.weeks.size > 0
+            ? Number((te.sum / te.weeks.size).toFixed(1)) : null;
+          return {
+            hauler_id:          h.id,
+            hauler_display:     h.display_name,
+            avg_l_per_100km,
+            avg_trips_per_week,
+            truck_count:        h.fleet?.contracted_trucks ?? 0,
+          };
+        })
+        .filter((h) => h.avg_l_per_100km != null && h.avg_trips_per_week != null);
+    } catch (_) { /* non-fatal */ }
+
+    res.json({ ...base, today_live, hauler_attainment, weekday_pattern, efficiency_benchmark });
   } catch (err) {
     console.error('[analytics]', err);
     res.status(500).json({ error: 'Analytics composition failed' });

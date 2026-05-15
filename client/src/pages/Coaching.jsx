@@ -20,6 +20,7 @@ import Modal from '../components/primitives/Modal';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import CoachingEffectivenessCard from '../components/coaching/CoachingEffectivenessCard';
+import CoachingSessionTrend     from '../components/coaching/CoachingSessionTrend';
 
 const TIER_TONE = {
   urgent:  'var(--bauxite-rust)',
@@ -92,6 +93,11 @@ export default function Coaching() {
         <RecentSessionsCard sessions={data?.recent_sessions ?? []} />
         {/* Phase 144 — coaching effectiveness scorecard */}
         <CoachingEffectivenessCard summary={data?.effectiveness_summary} />
+
+        {/* Phase 176 — 8-week session volume trend */}
+        {data?.session_trend && (
+          <CoachingSessionTrend sessionTrend={data.session_trend} />
+        )}
       </div>
 
       {composeFor && (

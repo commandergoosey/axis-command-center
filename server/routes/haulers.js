@@ -63,10 +63,15 @@ router.get('/', (_req, res) => {
   let liveStats = {};
   try { liveStats = convoyState.liveHaulerStats(); } catch (_) { /* non-fatal */ }
 
+  // Phase 174 — fleet share: each hauler's contracted truck count as a
+  // percentage of the total contracted corridor fleet.
+  const totalContracted = agg.fleet.contracted_trucks || 1; // guard /0
+
   res.json({
     haulers: agg.haulers.map((h) => ({
       ...withIntegration(h),
       live_today: liveStats[h.id] ?? null,
+      share_pct:  Number(((h.fleet?.contracted_trucks ?? 0) / totalContracted * 100).toFixed(1)),
     })),
     totals: {
       contracted_trucks: agg.fleet.contracted_trucks,

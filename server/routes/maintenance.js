@@ -77,6 +77,40 @@ router.get('/', (req, res) => {
   const criticalDecorated = critical.map(decorate);
   const criticalUnremediated = criticalDecorated.filter((r) => !r.active_workorder);
 
+  // Phase 175 — 8-week maintenance cost trend (MODELLED).
+  // Proxy: each rig-week in workshop = ~$380 labour + $120 overhead.
+  // Parts cost is seeded separately. Current week uses live counters;
+  // prior 7 weeks are seeded for demo stability.
+  function seededMaint(n) {
+    const raw = Math.sin(n * 5479 + 43) * 91_013;
+    return raw - Math.floor(raw);
+  }
+  const WORKSHOP_DAILY_USD = 380 + 120;  // labour + overhead per rig-day
+  const now = new Date();
+  const cost_trend = [];
+  for (let w = 7; w >= 0; w--) {
+    const weekMs = Date.now() - w * 7 * 86_400_000;
+    const monday = new Date(weekMs);
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    monday.setUTCHours(0, 0, 0, 0);
+    const label = monday.toISOString().slice(0, 10);
+    const wk    = Math.round(weekMs / (7 * 86_400_000));
+    const rigs  = w === 0
+      ? inWorkshop.length + Math.round(serviceDue.length * 0.3) // live
+      : Math.round(2 + seededMaint(wk) * 5);                    // seeded
+    const workshop_usd = Math.round(rigs * 5 * WORKSHOP_DAILY_USD);     // ~5 days avg stay
+    const parts_usd    = Math.round(800 + seededMaint(wk + 200) * 3_200);
+    cost_trend.push({
+      week:         label,
+      workshop_usd,
+      parts_usd,
+      total_usd:    workshop_usd + parts_usd,
+      rigs_in_shop: rigs,
+      is_current:   w === 0,
+      modelled:     true,
+    });
+  }
+
   res.json({
     generated_at: new Date().toISOString(),
     counters: {
@@ -92,6 +126,7 @@ router.get('/', (req, res) => {
     road_worthy_expiring_30d: roadWorthy.map(decorate),
     critical: criticalDecorated,
     recent_completions: recentCompletions(rows),
+    cost_trend,
   });
 });
 
