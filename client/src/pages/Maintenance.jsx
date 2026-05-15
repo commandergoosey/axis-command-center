@@ -19,6 +19,7 @@ import Button from '../components/primitives/Button';
 import StatusBadge from '../components/primitives/StatusBadge';
 import WorkorderDetail from '../components/maintenance/WorkorderDetail';
 import MaintenanceSchedulePanel from '../components/maintenance/MaintenanceSchedulePanel';
+import IntervalTrackerStrip from '../components/maintenance/IntervalTrackerStrip';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
 import { formatKm, formatUsd } from '../lib/format';
 
@@ -56,6 +57,8 @@ export default function Maintenance() {
 
       {state.data && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+          {/* Phase 138 — interval tracker strip */}
+          <IntervalTrackerStrip data={state.data} />
           <MaintenanceSchedulePanel
             rigs={[
               ...(state.data.critical ?? []),

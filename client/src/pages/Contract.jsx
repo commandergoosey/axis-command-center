@@ -12,6 +12,7 @@ import PageShell from '../components/layout/PageShell';
 import ContractTermsStrip    from '../components/contract/ContractTermsStrip';
 import TakeOrPayGauge        from '../components/contract/TakeOrPayGauge';
 import CumulativeTonnageChart from '../components/contract/CumulativeTonnageChart';
+import RunRatePanel          from '../components/contract/RunRatePanel';
 import SLAMeter              from '../components/contract/SLAMeter';
 import PaymentSecurityCard   from '../components/contract/PaymentSecurityCard';
 import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
@@ -64,6 +65,8 @@ export default function Contract() {
           <TakeOrPayGauge mtd={data?.mtd} />
           <CumulativeTonnageChart history={data?.history} />
         </div>
+
+        <RunRatePanel mtd={data?.mtd} />
 
         <div style={{
           display: 'grid',

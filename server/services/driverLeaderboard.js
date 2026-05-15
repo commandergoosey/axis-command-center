@@ -17,9 +17,15 @@
  *   The podiums and corridor averages always reflect the filtered
  *   set so the hauler admin sees a meaningful ranking within their
  *   own fleet; corridor_avg is also returned separately for context.
+ *
+ * Phase 136 — live_corridor: today's convoy dispatch count + tonnage +
+ *   active convoy count blended into the response so the Leaderboard
+ *   page can surface real-time corridor context alongside driver rankings.
  */
 
 const { DRIVERS } = require('../mock/drivers');
+const convoyState  = require('../state/convoyState');
+const dailyTargets = require('../state/dailyTargets');
 
 function normalise(val, max) {
   if (!max) return 0;
@@ -94,6 +100,21 @@ function compose(haulerFilter = null) {
     hours:  avg(corridorAll, 'hours_this_week'),
   };
 
+  // Phase 136 — live corridor context: today's convoy activity blended in
+  // so the Leaderboard page can show live ops alongside driver rankings.
+  // Advisory: failure returns zeroes so the page always has a valid shape.
+  let live_corridor = { today_convoys: 0, today_tonnes: 0, active_now: 0 };
+  try {
+    const dateKey = dailyTargets.todayKey();
+    const { total_tonnes, convoy_count } = convoyState.todayTonnage(dateKey);
+    const active = convoyState.listActive();
+    live_corridor = {
+      today_convoys: convoy_count,
+      today_tonnes:  Math.round(total_tonnes * 10) / 10,
+      active_now:    active.length,
+    };
+  } catch { /* non-fatal */ }
+
   return {
     generated_at:  new Date().toISOString(),
     period:        'This week',
@@ -106,6 +127,7 @@ function compose(haulerFilter = null) {
     },
     corridor_avg:  corridorAvg,
     rankings,
+    live_corridor,
   };
 }
 

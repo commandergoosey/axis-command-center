@@ -27,6 +27,9 @@ const coachingState = require('../state/coachingState');
 const licenceState = require('../state/licenceState');
 const incidentState = require('../state/incidentState');
 const weighbridgeEvents = require('../state/weighbridgeEvents');
+// Phase 134 — covenant breach alerts
+const { buildCovenants } = require('./covenants');
+const roster = require('../state/roster');
 const haulers = require('../mock/haulers');
 
 const COACHING_COOLDOWN_DAYS = 7;
@@ -306,6 +309,42 @@ function synthLiveWbHolds(now) {
   });
 }
 
+/* ── Phase 134: Covenant breach alerts ────────────────────────────────
+ * Calls buildCovenants() on every alerts read. WATCH or BREACH covenants
+ * emit a synthetic alert with a stable id (`synth-cov-{id}`) so alertState
+ * overlay (snooze, assign, notes) sticks across requests. When the covenant
+ * returns to PASS the alert stops emitting — auto-cleared by lifecycle.
+ */
+function synthCovenantBreaches() {
+  let covenants;
+  try { covenants = buildCovenants(roster.list(), new Date()); } catch (_) { return []; }
+
+  return covenants
+    .filter((c) => c.status === 'WATCH' || c.status === 'BREACH')
+    .map((c) => {
+      const isBreached = c.status === 'BREACH';
+      return {
+        id:        `synth-cov-${c.id}`,
+        opened_at: new Date().toISOString(),
+        severity:  isBreached ? 'CRITICAL' : 'HIGH',
+        type:      'covenant_breach',
+        title:     `${isBreached ? 'Covenant breach' : 'Covenant watch'} · ${c.name}`,
+        body:      `${c.name} is ${c.status}. Current: ${c.metric ?? '—'}.${c.detail ? ' ' + c.detail : ''}`,
+        impact:    isBreached
+          ? 'Breach triggers lender step-in rights under the side-letter covenant schedule.'
+          : 'WATCH status means a breach may be imminent — lender notification may be required.',
+        action:    isBreached
+          ? 'Notify GIBDLC and DFI lender immediately. Prepare remediation plan.'
+          : 'Monitor daily and brief AXIS admin before the next lender call.',
+        status:    'NEEDS_ACTION',
+        link:      { label: 'Open financials', path: '/financials' },
+        default_owner_role: 'axis_admin',
+        generated: true,
+        is_live:   true,
+      };
+    });
+}
+
 function generated(now = Date.now()) {
   return [
     ...synthAxleHolds(now),
@@ -313,6 +352,7 @@ function generated(now = Date.now()) {
     ...synthFilings(now),
     ...synthMaintenance(),
     ...synthIntegrationFailures(),
+    ...synthCovenantBreaches(),
   ];
 }
 

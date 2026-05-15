@@ -117,9 +117,10 @@ export default function Leaderboard() {
     return m;
   }, [haulerOptions]);
 
-  const rankings = data?.rankings ?? [];
-  const podiums  = data?.podiums  ?? {};
-  const corridorAvg = data?.corridor_avg ?? { safety: 0, trips: 0, hours: 0 };
+  const rankings     = data?.rankings      ?? [];
+  const podiums      = data?.podiums       ?? {};
+  const corridorAvg  = data?.corridor_avg  ?? { safety: 0, trips: 0, hours: 0 };
+  const livecorridor = data?.live_corridor ?? null;
 
   return (
     <PageShell
@@ -140,6 +141,11 @@ export default function Leaderboard() {
           }}>
             Leaderboard unavailable — {error}
           </div>
+        )}
+
+        {/* ── Phase 136: Live corridor strip ──────────────────────── */}
+        {livecorridor && (
+          <LiveCorridorStrip live={livecorridor} loading={loading} />
         )}
 
         {/* ── Period + scope label ────────────────────────────────── */}
@@ -525,6 +531,82 @@ function FilterPill({ label, active, onClick, color }) {
     >
       {label}
     </button>
+  );
+}
+
+/* ── Phase 136 — Live corridor strip ─────────────────────────────── */
+
+function LiveCorridorStrip({ live, loading }) {
+  const { today_convoys = 0, today_tonnes = 0, active_now = 0 } = live;
+
+  const hasCorridor = today_convoys > 0 || active_now > 0;
+
+  return (
+    <div style={{
+      background:   'var(--surface-raised)',
+      border:       '1px solid var(--border-hairline)',
+      borderRadius: 'var(--radius-md)',
+      padding:      'var(--space-3) var(--space-4)',
+      display:      'flex',
+      alignItems:   'center',
+      gap:          'var(--space-5)',
+      flexWrap:     'wrap',
+    }}>
+      {/* Live dot */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <span style={{
+          width:        7,
+          height:       7,
+          borderRadius: '50%',
+          background:   hasCorridor ? 'var(--signal-green)' : 'var(--text-tertiary)',
+          boxShadow:    hasCorridor ? '0 0 0 2px rgba(74,222,128,0.2)' : 'none',
+          display:      'inline-block',
+          flexShrink:   0,
+        }} />
+        <span className="mono" style={{
+          fontSize: 9,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: 'var(--text-tertiary)',
+        }}>
+          Live corridor
+        </span>
+      </div>
+
+      <CorridorStat
+        label="Convoys today"
+        value={loading ? '…' : String(today_convoys)}
+      />
+      <CorridorStat
+        label="Tonnes southbound"
+        value={loading ? '…' : `${new Intl.NumberFormat('en-GB').format(today_tonnes)} t`}
+      />
+      <CorridorStat
+        label="Active right now"
+        value={loading ? '…' : String(active_now)}
+        accent={active_now > 0}
+      />
+    </div>
+  );
+}
+
+function CorridorStat({ label, value, accent }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+      <span style={{
+        fontSize: 'var(--ts-body-sm-size)',
+        fontWeight: 'var(--fw-medium)',
+        color: accent ? 'var(--signal-green)' : 'var(--text)',
+      }}>
+        {value}
+      </span>
+      <span style={{
+        fontSize: 'var(--ts-caption-size)',
+        color: 'var(--text-tertiary)',
+      }}>
+        {label}
+      </span>
+    </div>
   );
 }
 

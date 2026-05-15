@@ -85,17 +85,44 @@ router.get('/', (_req, res) => {
       monthly_tonnes_contracted: monthlyContracted,
       base_tariff_usd_per_tonne: CONTRACT.base_tariff_usd_per_tonne,
     },
-    mtd: {
-      month:               currentMonthKey,
-      contracted_tonnes:   mtdContracted,
-      delivered_tonnes:    mtdDelivered,
-      floor_tonnes:        mtdFloor,
-      cushion_tonnes:      mtdCushion,
-      attainment_pct:      attainmentPct,
-      on_track:            mtdDelivered >= mtdFloor,
-      has_live_data:       hasLiveData,
-      live_convoy_count:   hasLiveData ? liveMtd.convoy_count : null,
-    },
+    mtd: (() => {
+      // Phase 135 — required daily run-rate to stay above take-or-pay floor.
+      const y = now.getUTCFullYear(), m = now.getUTCMonth();
+      const daysInMonth   = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      const dayOfMonth    = now.getUTCDate();
+      const daysRemaining = Math.max(1, daysInMonth - dayOfMonth);
+      const tonnesNeeded  = Math.max(0, mtdFloor - mtdDelivered);
+      const reqDailyRate  = Number((tonnesNeeded / daysRemaining).toFixed(1));
+      // Current run-rate from days elapsed
+      const daysElapsed   = Math.max(1, dayOfMonth - 1);
+      const currentDailyRate = Number((mtdDelivered / daysElapsed).toFixed(1));
+      // Pace: projected total at current rate vs floor
+      const projectedTotal = currentDailyRate * daysInMonth;
+      const paceVerdict    = projectedTotal >= mtdFloor
+        ? (projectedTotal >= mtdContracted ? 'AHEAD' : 'ON_TRACK')
+        : 'AT_RISK';
+
+      return {
+        month:               currentMonthKey,
+        contracted_tonnes:   mtdContracted,
+        delivered_tonnes:    mtdDelivered,
+        floor_tonnes:        mtdFloor,
+        cushion_tonnes:      mtdCushion,
+        attainment_pct:      attainmentPct,
+        on_track:            mtdDelivered >= mtdFloor,
+        has_live_data:       hasLiveData,
+        live_convoy_count:   hasLiveData ? liveMtd.convoy_count : null,
+        // Phase 135
+        days_in_month:      daysInMonth,
+        days_remaining:     daysRemaining,
+        days_elapsed:       daysElapsed,
+        tonnes_needed:      tonnesNeeded,
+        required_daily_rate: reqDailyRate,
+        current_daily_rate:  currentDailyRate,
+        projected_total:     Math.round(projectedTotal),
+        pace:                paceVerdict,
+      };
+    })(),
     ytd: {
       contracted_tonnes: ytdContracted,
       delivered_tonnes:  ytdDelivered,

@@ -1380,47 +1380,82 @@ router.get('/handover/latest', requireAuth, (_req, res) => {
 // Composes a terse briefing paragraph from today's live convoy activity,
 // overdue flags, and fleet state. axis_admin / axis_ops only — this is
 // a write-surface aid, not a public read.
+// Phase 137 — richer AI-drafted shift summary. Composes a structured
+// multi-section handover brief from live convoy state, fleet status,
+// alerts, and contract MTD pace. Each section is independently
+// non-fatal so a partial data failure still yields a useful draft.
 router.get('/handover-brief', requireRole(...HANDOVER_WRITE_ROLES), (_req, res) => {
   try {
-    const dateKey = dailyTargets.todayKey();
-    const { total_tonnes, convoy_count } = convoyState.todayTonnage(dateKey);
-    const active   = convoyState.listActive();
-    const overdue  = active.filter((c) => c.is_overdue);
-    const loading  = active.filter((c) => c.phase === 'loading');
-    const laden    = active.filter((c) => c.phase === 'laden');
-    const offload  = active.filter((c) => c.phase === 'offload');
+    const sections = [];
 
-    const target   = dailyTargets.getTarget(dateKey);
-    const targetT  = target?.target_tonnes ?? null;
+    // ── 1. Convoy ops ─────────────────────────────────────────────
+    try {
+      const dateKey = dailyTargets.todayKey();
+      const { total_tonnes, convoy_count } = convoyState.todayTonnage(dateKey);
+      const active   = convoyState.listActive();
+      const overdue  = active.filter((c) => c.is_overdue);
+      const loadingC = active.filter((c) => c.phase === 'loading');
+      const ladenC   = active.filter((c) => c.phase === 'laden');
+      const offloadC = active.filter((c) => c.phase === 'offload');
+      const target   = dailyTargets.getTarget(dateKey);
+      const targetT  = target?.target_tonnes ?? null;
 
-    const lines = [];
+      const opsLines = [];
+      if (convoy_count > 0) {
+        const tStr   = total_tonnes > 0 ? ` — ${Math.round(total_tonnes * 10) / 10} t southbound` : '';
+        const tgtStr = targetT ? ` (target: ${targetT.toLocaleString()} t)` : '';
+        opsLines.push(`${convoy_count} convoy${convoy_count === 1 ? '' : 's'} dispatched today${tStr}${tgtStr}.`);
+      } else {
+        opsLines.push('No convoys dispatched today.');
+      }
+      const activeParts = [];
+      if (ladenC.length)   activeParts.push(`${ladenC.length} en route`);
+      if (loadingC.length) activeParts.push(`${loadingC.length} loading`);
+      if (offloadC.length) activeParts.push(`${offloadC.length} offloading`);
+      if (activeParts.length) opsLines.push(`Active: ${activeParts.join(', ')}.`);
+      if (overdue.length) {
+        const refs = overdue.map((c) => c.convoy_ref).join(', ');
+        opsLines.push(`⚠ Overdue convoys: ${refs}. Confirm phase and ETA before signing off.`);
+      }
+      sections.push('CONVOY OPS\n' + opsLines.join(' '));
+    } catch { /* non-fatal */ }
 
-    // Tonnage summary
-    if (convoy_count > 0) {
-      const tStr = total_tonnes > 0 ? ` — ${Math.round(total_tonnes * 10) / 10} t southbound` : '';
-      const tgtStr = targetT ? ` (target: ${targetT.toLocaleString()} t)` : '';
-      lines.push(`${convoy_count} convoy${convoy_count === 1 ? '' : 's'} dispatched today${tStr}${tgtStr}.`);
-    } else {
-      lines.push('No convoys dispatched today.');
-    }
+    // ── 2. Fleet pulse ────────────────────────────────────────────
+    try {
+      const activeRigs    = FLEET.filter((t) => t.status === 'active').length;
+      const garageRigs    = FLEET.filter((t) => t.status === 'garage').length;
+      const criticalRigs  = FLEET.filter((t) => t.maintenance_flag === 'critical').length;
+      const serviceDueRigs = FLEET.filter((t) => t.maintenance_flag === 'service_due').length;
 
-    // Current active status
-    const activeParts = [];
-    if (laden.length)   activeParts.push(`${laden.length} en route`);
-    if (loading.length) activeParts.push(`${loading.length} loading`);
-    if (offload.length) activeParts.push(`${offload.length} offloading`);
-    if (activeParts.length) lines.push(`Active: ${activeParts.join(', ')}.`);
+      const fleetLines = [`Fleet: ${activeRigs} active, ${garageRigs} in workshop.`];
+      if (criticalRigs > 0)   fleetLines.push(`${criticalRigs} rig${criticalRigs > 1 ? 's' : ''} critical — pulled from corridor.`);
+      if (serviceDueRigs > 0) fleetLines.push(`${serviceDueRigs} rig${serviceDueRigs > 1 ? 's' : ''} overdue service interval — schedule before next laden trip.`);
+      sections.push('FLEET\n' + fleetLines.join(' '));
+    } catch { /* non-fatal */ }
 
-    // Overdue
-    if (overdue.length) {
-      const refs = overdue.map((c) => c.convoy_ref).join(', ');
-      lines.push(`Overdue: ${refs}. Investigate and update phase.`);
-    }
+    // ── 3. Contract MTD pace ──────────────────────────────────────
+    try {
+      const now     = new Date();
+      const agg     = aggregate(roster.list(), now);
+      const mtdD    = agg.tonnes.delivered_mtd;
+      const mtdC    = agg.tonnes.contracted_mtd;
+      const floor   = Math.round(mtdC * CONTRACT.take_or_pay_floor_pct);
+      const above   = mtdD >= floor;
+      const gap     = Math.round(Math.abs(mtdD - floor));
 
-    // Placeholder for outgoing op to complete
-    lines.push('\n[Add handover items for incoming shift below:]');
+      const paceStr = above
+        ? `MTD: ${Math.round(mtdD).toLocaleString()} t delivered — ${gap.toLocaleString()} t above take-or-pay floor.`
+        : `MTD: ${Math.round(mtdD).toLocaleString()} t delivered — ${gap.toLocaleString()} t BELOW take-or-pay floor (${floor.toLocaleString()} t). Escalate if pace worsens.`;
+      sections.push('CONTRACT PULSE\n' + paceStr);
+    } catch { /* non-fatal */ }
 
-    res.json({ brief: lines.join(' ') });
+    // ── 4. Open items placeholder ─────────────────────────────────
+    sections.push('OPEN ITEMS FOR INCOMING SHIFT\n[Describe outstanding issues, escalations, or actions the incoming operator must pick up.]');
+
+    res.json({
+      brief:      sections.join('\n\n'),
+      ai_drafted: true,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

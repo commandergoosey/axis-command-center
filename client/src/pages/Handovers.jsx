@@ -87,6 +87,7 @@ export default function Handovers() {
   const [postErr,     setPostErr]     = useState(null);
   const [deleteId,    setDeleteId]    = useState(null);
   const [prefilling,  setPrefilling]  = useState(false); // Phase 121
+  const [aiDrafted,   setAiDrafted]   = useState(false); // Phase 137
 
   const textareaRef = useRef(null);
 
@@ -158,6 +159,7 @@ export default function Handovers() {
       const r = await authFetch('/api/today/handover-brief');
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const j = await r.json();
+      if (j.ai_drafted) setAiDrafted(true);
       setBody((prev) => {
         const prefix = j.brief ?? '';
         return prev.trim() ? `${prefix}\n\n${prev}` : prefix;
@@ -175,6 +177,7 @@ export default function Handovers() {
 
   function onBodyChange(e) {
     setBody(e.target.value);
+    if (!e.target.value.trim()) setAiDrafted(false);
     const t = e.target;
     t.style.height = 'auto';
     t.style.height = `${t.scrollHeight}px`;
@@ -230,9 +233,26 @@ export default function Handovers() {
         {/* ── Composer ──────────────────────────────────────────── */}
         {canWrite && (
           <section>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
-              <div className="eyebrow">Post handover</div>
-              {/* Phase 121 — pre-fill from live data */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="eyebrow">Post handover</div>
+                {/* Phase 137 — AI-drafted badge */}
+                {aiDrafted && (
+                  <span className="mono" style={{
+                    fontSize: 9,
+                    padding: '2px 7px',
+                    background: 'rgba(74,222,128,0.08)',
+                    border: '1px solid rgba(74,222,128,0.3)',
+                    borderRadius: 3,
+                    color: 'var(--signal-green)',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                  }}>
+                    AI DRAFTED
+                  </span>
+                )}
+              </div>
+              {/* Phase 121 / Phase 137 — pre-fill from live data */}
               <button
                 type="button"
                 onClick={handlePrefill}
@@ -247,7 +267,7 @@ export default function Handovers() {
                   cursor: prefilling ? 'wait' : 'pointer',
                 }}
               >
-                {prefilling ? 'Fetching…' : 'Pre-fill from live data'}
+                {prefilling ? 'Drafting…' : 'AI draft from live data'}
               </button>
             </div>
             <div style={{
