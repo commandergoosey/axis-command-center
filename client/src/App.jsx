@@ -1,5 +1,68 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, Component } from 'react';
+
+/* Root error boundary — catches any render crash and shows a readable
+   message instead of a blank page. In development React already shows
+   the error overlay; this is the production safety net. */
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          background: '#f5f0eb',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: 'monospace',
+          padding: 32,
+          gap: 16,
+        }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.1em', color: '#8b2e1a' }}>AXIS — APPLICATION ERROR</div>
+          <pre style={{
+            maxWidth: 720,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+            background: 'white',
+            border: '1px solid #ddd',
+            borderRadius: 4,
+            padding: '12px 16px',
+            fontSize: 12,
+            color: '#333',
+          }}>
+            {this.state.error?.message}
+            {'\n\n'}
+            {this.state.error?.stack}
+          </pre>
+          <button
+            onClick={() => { this.setState({ error: null }); window.location.href = '/'; }}
+            style={{
+              padding: '8px 20px',
+              background: '#8b2e1a',
+              color: 'white',
+              border: 'none',
+              borderRadius: 4,
+              fontFamily: 'monospace',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Reload app
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
 import DemoBanner from './components/layout/DemoBanner';
@@ -165,12 +228,14 @@ function Gate() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <SidebarProvider>
-          <Gate />
-        </SidebarProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <SidebarProvider>
+            <Gate />
+          </SidebarProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
