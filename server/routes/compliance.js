@@ -311,6 +311,48 @@ router.get('/', (_req, res) => {
   const upcoming_deadlines = [...filingDeadlines, ...licenceDeadlines]
     .sort((a, b) => a.days_remaining - b.days_remaining);
 
+  // Phase 167 — compliance health score + 8-week trend.
+  // Score = share of tracked items currently compliant (0–100).
+  // Licences counted compliant if > 30 days remaining and not overdue.
+  // Filings counted compliant if status === 'FILED'.
+  // Prior 7 weeks use a seeded PRNG; current week is live.
+  const allFilings   = mergedFilings();
+  const allLicences  = mergedLicences(now).filter((l) => l.days_remaining <= 90);
+  const compliantLic = allLicences.filter((l) => l.days_remaining > 30 && !l.overdue).length;
+  const compliantFil = allFilings.filter((f)  => f.status === 'FILED').length;
+  const totalItems   = allLicences.length + allFilings.length;
+  const currentScore = totalItems > 0
+    ? Math.round(((compliantLic + compliantFil) / totalItems) * 100)
+    : 100;
+
+  function seededHealthScore(n) {
+    const raw = Math.sin(n * 3571 + 29) * 61_739;
+    return raw - Math.floor(raw);
+  }
+  const nowH = new Date();
+  const health_trend = [];
+  for (let w = 7; w >= 0; w--) {
+    const ref    = new Date(nowH.getTime() - w * 7 * 86_400_000);
+    const monday = new Date(ref);
+    monday.setUTCDate(ref.getUTCDate() - ((ref.getUTCDay() + 6) % 7));
+    const weekLabel = monday.toISOString().slice(0, 10);
+    const wk = monday.getUTCFullYear() * 1000
+             + monday.getUTCMonth()    *   31
+             + monday.getUTCDate();
+    health_trend.push({
+      week:  weekLabel,
+      score: w === 0 ? currentScore : Math.round(68 + seededHealthScore(wk) * 28),
+    });
+  }
+
+  const health_score = {
+    current:          currentScore,
+    status:           currentScore >= 85 ? 'GOOD' : currentScore >= 70 ? 'WATCH' : 'RISK',
+    compliant_items:  compliantLic + compliantFil,
+    total_items:      totalItems,
+    trend:            health_trend,
+  };
+
   res.json({
     generated_at: new Date().toISOString(),
     axle: {
@@ -326,6 +368,7 @@ router.get('/', (_req, res) => {
     licence_expiry: licenceExpiry,
     filings: mergedFilings(),
     upcoming_deadlines,
+    health_score,
   });
 });
 

@@ -26,7 +26,8 @@ import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2 } from 'lu
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
-import HaulerThroughputChart from '../components/analytics/HaulerThroughputChart';
+import HaulerThroughputChart  from '../components/analytics/HaulerThroughputChart';
+import WeekdayPatternChart    from '../components/analytics/WeekdayPatternChart';
 
 /* ── Token colours (CSS vars resolved at runtime) ─────────────────── */
 const C_RUST   = 'var(--bauxite-rust)';
@@ -419,6 +420,9 @@ export default function Analytics() {
 
         {/* ── Phase 154: Per-hauler stacked throughput ──────────── */}
         <HaulerThroughputChart weeks={weeks} haulerTotals={haulerTotals} />
+
+        {/* ── Phase 165: Weekday throughput pattern ─────────────── */}
+        <WeekdayPatternChart weekdayPattern={data?.weekday_pattern} />
 
       </div>
     </PageShell>

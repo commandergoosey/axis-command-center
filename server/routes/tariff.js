@@ -64,6 +64,39 @@ router.get('/', (_req, res) => {
     return { month: h.month, fuel_usd, cpi_usd, fixed_usd, effective_usd_per_tonne: eff };
   });
 
+  // Phase 168 — 6-month tariff escalation forecast.
+  // Projects what the effective rate would be under three scenarios:
+  //   base   — indices held flat at current values
+  //   trend  — indices grow at their recent MoM rate (from last 2 history entries)
+  //   stress — trend + an extra 1% MoM fuel-price shock
+  // All entries marked modelled: true per §12.4.
+  function seededTariff(n) {
+    const raw = Math.sin(n * 7331 + 61) * 153_017;
+    return raw - Math.floor(raw);
+  }
+  const histLen   = historyWithDeltas.length;
+  const recentMoM = histLen >= 2 && historyWithDeltas[histLen - 2].effective_usd_per_tonne > 0
+    ? (historyWithDeltas[histLen - 1].effective_usd_per_tonne
+       - historyWithDeltas[histLen - 2].effective_usd_per_tonne)
+      / historyWithDeltas[histLen - 2].effective_usd_per_tonne
+    : 0.005;
+  const currentEffective = calc.effective_usd_per_tonne;
+  const nowT = new Date();
+  const escalation_forecast = Array.from({ length: 6 }, (_, m) => {
+    const fDate    = new Date(Date.UTC(nowT.getUTCFullYear(), nowT.getUTCMonth() + m + 1, 1));
+    const monthKey = fDate.toISOString().slice(0, 7);
+    const mk       = fDate.getUTCFullYear() * 100 + (fDate.getUTCMonth() + 1);
+    const noise    = (seededTariff(mk) - 0.5) * 0.002; // ±0.1% noise
+    const months   = m + 1;
+    return {
+      month:       monthKey,
+      base_rate:   Number(currentEffective.toFixed(2)),
+      trend_rate:  Number((currentEffective * Math.pow(1 + recentMoM + noise,           months)).toFixed(2)),
+      stress_rate: Number((currentEffective * Math.pow(1 + recentMoM + noise + 0.010,   months)).toFixed(2)),
+      modelled:    true,
+    };
+  });
+
   res.json({
     generated_at: new Date().toISOString(),
     base: {
@@ -83,6 +116,7 @@ router.get('/', (_req, res) => {
     npa_diesel: NPA_DIESEL,
     gss_cpi:    GSS_CPI,
     terms:      TARIFF_TERMS,
+    escalation_forecast,
   });
 });
 

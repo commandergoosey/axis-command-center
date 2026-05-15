@@ -26,6 +26,7 @@ import Modal from '../components/primitives/Modal';
 import Button from '../components/primitives/Button';
 import SettlementAgeingStrip   from '../components/settlements/SettlementAgeingStrip';
 import PaymentVelocityChart    from '../components/settlements/PaymentVelocityChart';
+import ReconciliationGapStrip  from '../components/settlements/ReconciliationGapStrip';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 
@@ -149,6 +150,8 @@ export default function Settlements() {
         <SettlementAgeingStrip haulerAging={data?.hauler_aging} />
         {/* Phase 158 — invoiced vs paid by period */}
         <PaymentVelocityChart paymentVelocity={data?.payment_velocity} />
+        {/* Phase 166 — expected vs invoiced reconciliation gap */}
+        <ReconciliationGapStrip reconciliation={data?.reconciliation} />
         {ageing && <AgeingPanel ageing={ageing} />}
         <FilterRow
           periods={data?.periods ?? []}

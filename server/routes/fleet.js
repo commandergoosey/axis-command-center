@@ -77,11 +77,38 @@ router.get('/', (req, res) => {
   const availability_by_hauler = Object.values(byHauler)
     .sort((a, b) => b.total - a.total);
 
+  // Phase 164 — maintenance forecast: trucks within 5,000 km of their
+  // next scheduled service (or already overdue). At the corridor's
+  // approximate daily run rate (~150 km/day) this gives roughly a
+  // 33-day look-ahead — enough for ops to pre-book workshop slots.
+  const SERVICE_LOOKAHEAD_KM = 5_000;
+  const AVG_KM_PER_DAY       = 150;
+  const maintenance_forecast = rows
+    .filter((t) => t.status !== 'garage')
+    .map((t) => {
+      const kmToService   = (t.next_service_km_due ?? 0) - (t.total_km ?? 0);
+      const daysToService = Math.round(kmToService / AVG_KM_PER_DAY);
+      return {
+        rig_id:           t.id,
+        plate:            t.plate,
+        hauler_id:        t.hauler_id,
+        hauler_display:   t.hauler_display,
+        total_km:         t.total_km,
+        km_to_service:    kmToService,
+        days_to_service:  daysToService,
+        maintenance_flag: t.maintenance_flag,
+        overdue:          kmToService < 0,
+      };
+    })
+    .filter((t) => t.km_to_service <= SERVICE_LOOKAHEAD_KM)
+    .sort((a, b) => a.km_to_service - b.km_to_service);
+
   res.json({
     generated_at: new Date().toISOString(),
     total:  rows.length,
     trucks: rows,
     availability_by_hauler,
+    maintenance_forecast,
   });
 });
 

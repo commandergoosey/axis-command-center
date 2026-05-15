@@ -13,8 +13,9 @@ import EffectiveRateHero from '../components/tariff/EffectiveRateHero';
 import IndexationPanel   from '../components/tariff/IndexationPanel';
 import TrendCard         from '../components/tariff/TrendCard';
 import EffectiveRateHistoryCard  from '../components/tariff/EffectiveRateHistoryCard';
-import IndexationBreakdownChart  from '../components/tariff/IndexationBreakdownChart';
-import IntelligencePanel         from '../components/intelligence/IntelligencePanel';
+import IndexationBreakdownChart    from '../components/tariff/IndexationBreakdownChart';
+import TariffEscalationForecast   from '../components/tariff/TariffEscalationForecast';
+import IntelligencePanel           from '../components/intelligence/IntelligencePanel';
 
 export default function Tariff() {
   const [data, setData]   = useState(null);
@@ -99,6 +100,14 @@ export default function Tariff() {
             />
           )}
         </div>
+
+        {/* Phase 168 — 6-month escalation forecast: base / trend / stress */}
+        {data?.escalation_forecast && (
+          <TariffEscalationForecast
+            escalationForecast={data.escalation_forecast}
+            currentRate={data.effective_rate_usd_per_tonne}
+          />
+        )}
 
         <IntelligencePanel page="tariff" />
 

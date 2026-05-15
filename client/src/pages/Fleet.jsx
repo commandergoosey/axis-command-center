@@ -13,7 +13,8 @@ import PageShell from '../components/layout/PageShell';
 import Button from '../components/primitives/Button';
 import StatusBadge from '../components/primitives/StatusBadge';
 import RigDetail from '../components/fleet/RigDetail';
-import FleetAvailabilityStrip from '../components/fleet/FleetAvailabilityStrip';
+import FleetAvailabilityStrip    from '../components/fleet/FleetAvailabilityStrip';
+import MaintenanceForecastStrip  from '../components/fleet/MaintenanceForecastStrip';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
 import { formatKm } from '../lib/format';
 
@@ -144,6 +145,13 @@ export default function Fleet() {
       {roster.data && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <FleetAvailabilityStrip availabilityByHauler={roster.data.availability_by_hauler} />
+        </div>
+      )}
+
+      {/* Phase 164 — maintenance look-ahead: trucks within 5,000 km of service */}
+      {roster.data?.maintenance_forecast?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <MaintenanceForecastStrip maintenanceForecast={roster.data.maintenance_forecast} />
         </div>
       )}
 
