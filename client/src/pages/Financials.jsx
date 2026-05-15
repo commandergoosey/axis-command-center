@@ -12,7 +12,8 @@ import PageShell           from '../components/layout/PageShell';
 import DSCRHero            from '../components/financials/DSCRHero';
 import PnLSnapshot         from '../components/financials/PnLSnapshot';
 import PLTrendChart        from '../components/financials/PLTrendChart';
-import CovenantTable       from '../components/financials/CovenantTable';
+import CovenantTable          from '../components/financials/CovenantTable';
+import CovenantHeadroomChart  from '../components/financials/CovenantHeadroomChart';
 import CashflowForecast    from '../components/financials/CashflowForecast';
 import ReceivablesPanel    from '../components/financials/ReceivablesPanel';
 import HaulerRevenueStrip  from '../components/financials/HaulerRevenueStrip';
@@ -89,6 +90,8 @@ export default function Financials() {
           <PnLSnapshot pnl={data?.pnl} />
           <CovenantTable covenants={data?.covenants} />
         </div>
+        {/* Phase 163 — covenant headroom: spatial distance from each threshold */}
+        <CovenantHeadroomChart covenants={data?.covenants} />
         <ReceivablesPanel receivables={data?.receivables} onMutate={load} />
         <HaulerRevenueStrip haulers={data?.by_hauler} />
         {/* Phase 156 — monthly P&L trend */}

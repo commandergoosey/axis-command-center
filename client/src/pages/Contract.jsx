@@ -12,6 +12,7 @@ import PageShell from '../components/layout/PageShell';
 import ContractTermsStrip    from '../components/contract/ContractTermsStrip';
 import TakeOrPayGauge        from '../components/contract/TakeOrPayGauge';
 import CumulativeTonnageChart from '../components/contract/CumulativeTonnageChart';
+import TakeOrPayProjection   from '../components/contract/TakeOrPayProjection';
 import RunRatePanel          from '../components/contract/RunRatePanel';
 import ForecastAnomalyStrip  from '../components/contract/ForecastAnomalyStrip';
 import SLAMeter              from '../components/contract/SLAMeter';
@@ -68,6 +69,9 @@ export default function Contract() {
         </div>
 
         <RunRatePanel mtd={data?.mtd} />
+
+        {/* Phase 162 — cumulative take-or-pay projection to year-end */}
+        {data?.top_projection && <TakeOrPayProjection projection={data.top_projection} />}
 
         {/* Phase 151 — forecast anomaly alerts */}
         {data?.anomalies?.length > 0 && (

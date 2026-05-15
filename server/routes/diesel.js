@@ -51,7 +51,36 @@ router.get('/', requireAuth, (_req, res) => {
     }))
     .sort((a, b) => b.fuel_usd_per_tonne - a.fuel_usd_per_tonne);
 
-  res.json({ ...base, actual_burns, burn_ranking });
+  // Phase 159 — 12-week diesel price & burn-cost trend.
+  // NPA pump price (GHS/litre) and modelled corridor burn cost (USD/tonne)
+  // are seeded so the chart shows realistic week-on-week variation without
+  // a live price feed. Both series share a stable PRNG to avoid correlation.
+  function seededDiesel(n) {
+    const raw = Math.sin(n * 6271 + 41) * 109571;
+    return raw - Math.floor(raw);
+  }
+  const BASE_PRICE_GHS  = 14.20; // approximate NPA mid-2026 rate
+  const PRICE_RANGE_GHS =  1.40; // weekly ±0.7 GHS swing
+  const nowRef = new Date();
+  const price_history = [];
+  for (let w = 11; w >= 0; w--) {
+    const ref    = new Date(nowRef.getTime() - w * 7 * 86_400_000);
+    const monday = new Date(ref);
+    monday.setUTCDate(ref.getUTCDate() - ((ref.getUTCDay() + 6) % 7));
+    const weekLabel = monday.toISOString().slice(0, 10);
+    const wk = monday.getUTCFullYear() * 1000
+             + monday.getUTCMonth()    *   31
+             + monday.getUTCDate();
+    const price_ghs_per_litre = Number(
+      (BASE_PRICE_GHS + (seededDiesel(wk) - 0.5) * PRICE_RANGE_GHS).toFixed(2),
+    );
+    const burn_usd_per_tonne = Number(
+      (corridorAvg * (0.92 + seededDiesel(wk + 500) * 0.16)).toFixed(2),
+    );
+    price_history.push({ week_of: weekLabel, price_ghs_per_litre, burn_usd_per_tonne });
+  }
+
+  res.json({ ...base, actual_burns, burn_ranking, price_history });
 });
 
 module.exports = router;

@@ -22,6 +22,7 @@ import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import FatigueMonitorStrip from '../components/drivers/FatigueMonitorStrip';
 import HOSTrendChart       from '../components/drivers/HOSTrendChart';
+import HaulerRadarChart    from '../components/drivers/HaulerRadarChart';
 
 /* ── Medal colours ───────────────────────────────────────────────── */
 const MEDAL = {
@@ -219,6 +220,9 @@ export default function Leaderboard() {
 
         {/* ── Phase 153: HOS 8-week trend ─────────────────────────── */}
         <HOSTrendChart hosTrend={data?.hos_trend} />
+
+        {/* ── Phase 160: per-hauler performance radar ──────────────── */}
+        {!isHaulerAdmin && <HaulerRadarChart haulerRadar={data?.hauler_radar} />}
 
         {/* ── Full ranking table ───────────────────────────────────── */}
         <section>

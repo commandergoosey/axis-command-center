@@ -23,6 +23,7 @@ import { Fuel, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, CalendarRange
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import BurnEfficiencyStrip from '../components/diesel/BurnEfficiencyStrip';
+import DieselPriceTrend    from '../components/diesel/DieselPriceTrend';
 
 export default function Diesel() {
   const [data, setData]   = useState(null);
@@ -73,6 +74,9 @@ export default function Diesel() {
             burnRanking={data.burn_ranking}
             corridorAvg={data.fleet_burn?.corridor_avg_fuel_usd_per_tonne}
           />
+
+          {/* Phase 159 — 12-week diesel price & burn-cost trend */}
+          <DieselPriceTrend priceHistory={data.price_history} />
 
           {/* Phase 115 — actual fill events from Phase 111 fuel logs */}
           <ActualBurnsPanel burns={data.actual_burns} />

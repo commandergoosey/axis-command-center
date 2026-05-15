@@ -173,6 +173,54 @@ function compose(haulerFilter = null) {
     });
   }
 
+  // Phase 160 — per-hauler 5-axis performance radar.
+  // Aggregates driver rankings within each hauler into five normalised
+  // 0–100 scores: throughput, safety, hours utilisation, fatigue compliance,
+  // and corridor contribution. Gives ops an at-a-glance cross-hauler
+  // performance comparison across all five dimensions simultaneously.
+  const maxTrips = Math.max(1, ...corridorAll.map((d) => d.trips_this_week ?? 0));
+  const haulerGroups = {};
+  rankings.forEach((d) => {
+    if (!haulerGroups[d.hauler_id]) {
+      haulerGroups[d.hauler_id] = {
+        hauler_id:    d.hauler_id,
+        display_name: d.hauler_display,
+        drivers:      [],
+      };
+    }
+    haulerGroups[d.hauler_id].drivers.push(d);
+  });
+  const hauler_radar = Object.values(haulerGroups).map((h) => {
+    const ds = h.drivers;
+    const n  = Math.max(1, ds.length);
+    const avgSafety = ds.reduce((s, d) => s + (d.safety_score       ?? 0), 0) / n;
+    const avgTrips  = ds.reduce((s, d) => s + (d.trips_this_week    ?? 0), 0) / n;
+    const avgHours  = ds.reduce((s, d) => s + (d.hours_this_week    ?? 0), 0) / n;
+
+    const safety_score      = Math.round(avgSafety);
+    const throughput_score  = Math.round((avgTrips / maxTrips) * 100);
+    // Ideal seat-time window: 50–62 h/wk — penalise either side
+    const IDEAL_HOURS = 56;
+    const hours_score = Math.min(100, Math.max(0, Math.round(100 - Math.abs(avgHours - IDEAL_HOURS) * 2.5)));
+    // Fatigue compliance: share of drivers below the 60h WATCH threshold
+    const watchCount = ds.filter((d) => (d.hours_this_week ?? 0) >= 60).length;
+    const fatigue_compliance = Math.round(((n - watchCount) / n) * 100);
+    // Corridor contribution: normalised trip-share relative to corridor avg
+    const tripsShare = corridorAvg.trips > 0
+      ? Math.min(150, Math.round((avgTrips / corridorAvg.trips) * 100))
+      : 100;
+    return {
+      hauler_id:           h.hauler_id,
+      display_name:        h.display_name,
+      driver_count:        n,
+      safety_score,
+      throughput_score,
+      hours_score,
+      fatigue_compliance,
+      corridor_contribution: tripsShare,
+    };
+  });
+
   return {
     generated_at:  new Date().toISOString(),
     period:        'This week',
@@ -188,6 +236,7 @@ function compose(haulerFilter = null) {
     live_corridor,
     fatigue_flags,
     hos_trend,
+    hauler_radar,
   };
 }
 

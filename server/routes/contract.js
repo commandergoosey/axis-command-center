@@ -151,6 +151,60 @@ router.get('/', (_req, res) => {
     anomalies: (() => {
       try { return forecastAnomalies.detect(); } catch (_) { return []; }
     })(),
+    // Phase 162 — cumulative take-or-pay projection to year-end.
+    // Past months: actual cumulative from DELIVERY_HISTORY + live MTD.
+    // Future months: extrapolated at the current MTD daily run-rate.
+    // Gives ops and lenders a single chart showing whether the corridor
+    // will clear the take-or-pay floor by year-end at current pace.
+    top_projection: (() => {
+      const yr             = now.getUTCFullYear();
+      const currentMonthIdx = now.getUTCMonth(); // 0-based
+      const dayOfMonth     = now.getUTCDate();
+      const daysElapsed    = Math.max(1, dayOfMonth - 1);
+      const dailyRate      = mtdDelivered > 0
+        ? mtdDelivered / daysElapsed
+        : monthlyContracted / 30.44;
+      const floorPct       = CONTRACT.take_or_pay_floor_pct;
+
+      let cumActual = 0;
+      let cumProj   = 0;
+      let cumFloor  = 0;
+      let cumTarget = 0;
+
+      return Array.from({ length: 12 }, (_, m) => {
+        const monthKey     = `${yr}-${String(m + 1).padStart(2, '0')}`;
+        const isCurrentMonth = m === currentMonthIdx;
+        const isPast         = m < currentMonthIdx;
+        const isFuture       = m > currentMonthIdx;
+        const daysInMonth    = new Date(Date.UTC(yr, m + 1, 0)).getUTCDate();
+
+        cumFloor  += Math.round(monthlyContracted * floorPct);
+        cumTarget += monthlyContracted;
+
+        if (isPast) {
+          const hist     = DELIVERY_HISTORY.find((h) => h.month === monthKey);
+          const delivered = hist?.delivered ?? 0;
+          cumActual += delivered;
+          cumProj   += delivered;
+        } else if (isCurrentMonth) {
+          cumActual += mtdDelivered;
+          cumProj   += Math.round(dailyRate * daysInMonth);
+        } else {
+          // isFuture
+          cumProj += Math.round(dailyRate * daysInMonth);
+        }
+
+        return {
+          month:                monthKey,
+          cumulative_actual:    isPast || isCurrentMonth ? cumActual : null,
+          cumulative_projected: isCurrentMonth || isFuture ? cumProj  : null,
+          cumulative_floor:     cumFloor,
+          cumulative_target:    cumTarget,
+          is_current:           isCurrentMonth,
+          is_future:            isFuture,
+        };
+      });
+    })(),
   });
 });
 

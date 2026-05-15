@@ -23,7 +23,8 @@ import Modal from '../components/primitives/Modal';
 import Button from '../components/primitives/Button';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
-import ClaimsExposureChart from '../components/claims/ClaimsExposureChart';
+import ClaimsExposureChart   from '../components/claims/ClaimsExposureChart';
+import ClaimsMonthlyTrend   from '../components/claims/ClaimsMonthlyTrend';
 
 const STATUS_TONE = {
   filed:        'var(--text-secondary)',
@@ -84,6 +85,8 @@ export default function Claims() {
         <KpiStrip counts={data?.counts} />
         <FilterRow counts={data?.counts} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
         <ClaimsExposureChart exposureByType={data?.exposure_by_type} />
+        {/* Phase 161 — 6-month claim frequency trend by category */}
+        <ClaimsMonthlyTrend monthlyTrend={data?.monthly_trend} />
 
         {!data ? (
           <p style={muted}>Loading…</p>
