@@ -33,9 +33,40 @@ const WRITE_ROLES = ['axis_admin', 'axis_ops'];
 // ── Templates ─────────────────────────────────────────────────────
 
 router.get('/', requireAuth, (_req, res) => {
+  const activePlaybooks = playbooks.listActive();
+  const recent_runs     = playbookRuns.recentRuns(10);
+
+  // Phase 145 — per-template completion rates from the last 10 runs.
+  // Groups done_count / total_count by playbook_id so the UI can render
+  // a completion rate strip without a second fetch.
+  const rateMap = {};
+  recent_runs.forEach((r) => {
+    const key = r.playbook_id;
+    if (!rateMap[key]) {
+      rateMap[key] = {
+        playbook_id:   r.playbook_id,
+        playbook_name: r.playbook_name,
+        run_count:     0,
+        done_items:    0,
+        total_items:   0,
+      };
+    }
+    const g = rateMap[key];
+    g.run_count++;
+    g.done_items  += r.done_count  ?? 0;
+    g.total_items += r.total_count ?? 0;
+  });
+  const completion_rates = Object.values(rateMap).map((g) => ({
+    ...g,
+    completion_pct: g.total_items > 0
+      ? Number(((g.done_items / g.total_items) * 100).toFixed(0))
+      : null,
+  })).sort((a, b) => (a.completion_pct ?? 100) - (b.completion_pct ?? 100)); // worst first
+
   res.json({
-    playbooks:   playbooks.listActive(),
-    recent_runs: playbookRuns.recentRuns(10),
+    playbooks:   activePlaybooks,
+    recent_runs,
+    completion_rates,
   });
 });
 

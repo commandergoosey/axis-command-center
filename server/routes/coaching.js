@@ -54,6 +54,32 @@ router.get('/pipeline', requireAuth, (req, res) => {
       return m;
     }, { total: 0, flagged: 0, overdue: 0, by_tier: {} });
   }
+
+  // Phase 144 — effectiveness summary: group recent sessions by tier and
+  // compute avg expected safety delta so ops can see coaching ROI per cohort.
+  const TIER_ORDER = ['urgent', 'high', 'medium', 'routine'];
+  const cohorts = {};
+  (data.recent_sessions ?? []).forEach((s) => {
+    const tier = s.tier ?? 'routine';
+    if (!cohorts[tier]) cohorts[tier] = { tier, sessions: 0, attendees: 0, sum_delta: 0 };
+    cohorts[tier].sessions++;
+    cohorts[tier].attendees   += s.attendees_count ?? 1;
+    cohorts[tier].sum_delta   += s.expected_delta_pct ?? 0;
+  });
+  data.effectiveness_summary = TIER_ORDER
+    .filter((t) => cohorts[t])
+    .map((t) => {
+      const g = cohorts[t];
+      return {
+        tier:                     t,
+        sessions:                 g.sessions,
+        attendees:                g.attendees,
+        avg_expected_delta_pct:   g.sessions > 0
+          ? Number((g.sum_delta / g.sessions).toFixed(1))
+          : 0,
+      };
+    });
+
   res.json(data);
 });
 

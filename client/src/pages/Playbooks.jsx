@@ -26,6 +26,7 @@ import Modal from '../components/primitives/Modal';
 import Button from '../components/primitives/Button';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
+import PlaybookCompletionStrip from '../components/playbooks/PlaybookCompletionStrip';
 
 const WRITE_ROLES = new Set(['axis_admin', 'axis_ops']);
 
@@ -111,6 +112,9 @@ export default function Playbooks() {
             </div>
           )}
         </section>
+
+        {/* Phase 145 — completion rate strip */}
+        <PlaybookCompletionStrip rates={data?.completion_rates} />
 
         {/* ── Recent runs section ────────────────────────────── */}
         <section>

@@ -13,6 +13,7 @@ import PillToggle from '../components/primitives/PillToggle';
 import CorridorSchematic from '../components/corridor/CorridorSchematic';
 import CorridorMap from '../components/corridor/CorridorMap';
 import CorridorConditions from '../components/corridor/CorridorConditions';
+import HealthTrendChart from '../components/corridor/HealthTrendChart';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
 
 const MODE_OPTIONS = [
@@ -84,6 +85,10 @@ export default function Corridor() {
           activeConvoys={data?.active_convoys}
           onAdvisoryChange={load}
         />
+      </div>
+
+      <div style={{ marginTop: 'var(--space-4)' }}>
+        <HealthTrendChart history={data?.health_history} />
       </div>
 
       <div style={{ marginTop: 'var(--space-4)' }}>

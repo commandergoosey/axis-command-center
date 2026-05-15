@@ -73,10 +73,24 @@ router.get('/', requireAuth, (req, res) => {
     in_flight_amount_usd: 0, approved_pending_payout_usd: 0, paid_amount_usd: 0,
   });
 
+  // Phase 146 — exposure by claim type: open claims (filed + under_review)
+  // aggregated per type so the client can render an exposure breakdown chart.
+  const OPEN_STATUSES = new Set(['filed', 'under_review', 'approved']);
+  const TYPE_KEYS = ['third_party_liability', 'rig_damage', 'cargo_loss', 'medical'];
+  const exposure_by_type = TYPE_KEYS.map((type) => {
+    const openForType = rows.filter((c) => c.type === type && OPEN_STATUSES.has(c.status));
+    return {
+      type,
+      count:        openForType.length,
+      exposure_usd: openForType.reduce((s, c) => s + (c.claim_amount_usd ?? 0), 0),
+    };
+  });
+
   res.json({
     generated_at: new Date().toISOString(),
     claims: rows,
     counts,
+    exposure_by_type,
   });
 });
 

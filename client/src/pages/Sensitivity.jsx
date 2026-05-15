@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
+import DSCRWaterfall from '../components/sensitivity/DSCRWaterfall';
 
 const VERDICT_TONE = {
   PASS:   'var(--signal-green)',
@@ -85,6 +86,7 @@ export default function Sensitivity() {
         {data && <PresetRow presets={data.presets} inputs={inputs} onApply={applyPreset} />}
         <SliderRow inputs={inputs} bounds={data?.bounds} setField={setField} />
         {data && <DeltaTiles deltas={data.deltas} baseline={data.baseline} scenario={data.scenario} />}
+        {data && <DSCRWaterfall waterfall={data.waterfall} targetMin={data.baseline?.target_min} />}
         {data && <ComparisonGrid baseline={data.baseline} scenario={data.scenario} />}
         {data && <ShowYourWork inputs={inputs} baseline={data.baseline} scenario={data.scenario} />}
       </div>

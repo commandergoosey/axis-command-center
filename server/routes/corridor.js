@@ -44,6 +44,32 @@ router.get('/', (_req, res) => {
     ? liveAdvisories
     : mockAdvisories;
 
+  // Phase 147 — synthetic 30-day corridor health score history.
+  // Seeded deterministically by day-of-year so the chart is stable
+  // across requests but still shows realistic variation. A real
+  // implementation would store these in the DB as they are computed.
+  function seeded(n) {
+    const x = Math.sin(n * 9301 + 49297) * 233280;
+    return x - Math.floor(x);
+  }
+  const today = new Date();
+  const BASE_SCORE = 72;
+  const health_history = [];
+  for (let d = 29; d >= 0; d--) {
+    const date = new Date(Date.UTC(
+      today.getUTCFullYear(),
+      today.getUTCMonth(),
+      today.getUTCDate() - d,
+    ));
+    const doy = Math.floor((date - new Date(Date.UTC(date.getUTCFullYear(), 0, 0))) / 86_400_000);
+    const score = Math.min(100, Math.max(42, Math.round(BASE_SCORE + seeded(doy) * 22 - 11)));
+    health_history.push({
+      date:  date.toISOString().slice(0, 10),
+      score,
+      verdict: score >= 75 ? 'STRONG' : score >= 60 ? 'WATCH' : 'BELOW',
+    });
+  }
+
   res.json({
     corridor: {
       name:         'Nyinahin–Takoradi',
@@ -54,6 +80,7 @@ router.get('/', (_req, res) => {
     segments:      SEGMENTS,
     conditions:    { ...CONDITIONS, advisories: mergedAdvisories },
     active_convoys: activeConvoys,
+    health_history,
   });
 });
 

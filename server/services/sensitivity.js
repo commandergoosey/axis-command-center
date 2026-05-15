@@ -167,6 +167,21 @@ function compose({ cedi_pct = 0, diesel_pct = 0, opex_pct = 0 } = {}, now = new 
     haulers, now,
   });
 
+  // Phase 148 — DSCR waterfall: three intermediate points isolating
+  // each factor's contribution so the client can render a waterfall chart.
+  const fxTariff    = effectiveTariffUnderShift({ cedi_pct, diesel_pct: 0 });
+  const fxOnly      = dscrUnderShift({ tariff_effective: fxTariff.effective_usd_per_tonne, opex_ratio_pct: BASE_OPEX_RATIO, haulers, now });
+  const fxDslTariff = effectiveTariffUnderShift({ cedi_pct, diesel_pct });
+  const fxDslOnly   = dscrUnderShift({ tariff_effective: fxDslTariff.effective_usd_per_tonne, opex_ratio_pct: BASE_OPEX_RATIO, haulers, now });
+
+  const waterfall = [
+    { label: 'Baseline',  dscr: Number(baseline.current.toFixed(2)),   step: null,                                               type: 'start' },
+    { label: 'FX (cedi)', dscr: Number(fxOnly.current.toFixed(2)),     step: Number((fxOnly.current    - baseline.current).toFixed(2)), type: 'delta' },
+    { label: 'Diesel',    dscr: Number(fxDslOnly.current.toFixed(2)),  step: Number((fxDslOnly.current - fxOnly.current).toFixed(2)),    type: 'delta' },
+    { label: 'Opex',      dscr: Number(scenario.current.toFixed(2)),   step: Number((scenario.current  - fxDslOnly.current).toFixed(2)), type: 'delta' },
+    { label: 'Scenario',  dscr: Number(scenario.current.toFixed(2)),   step: null,                                               type: 'end'   },
+  ];
+
   // Deltas — explicit so the UI doesn't reimplement the math.
   const deltas = {
     dscr:                 Number((scenario.current     - baseline.current).toFixed(2)),
@@ -206,6 +221,7 @@ function compose({ cedi_pct = 0, diesel_pct = 0, opex_pct = 0 } = {}, now = new 
       },
     },
     deltas,
+    waterfall,
     presets: PRESETS,
   };
 }

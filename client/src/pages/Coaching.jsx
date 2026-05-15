@@ -19,6 +19,7 @@ import Button from '../components/primitives/Button';
 import Modal from '../components/primitives/Modal';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
+import CoachingEffectivenessCard from '../components/coaching/CoachingEffectivenessCard';
 
 const TIER_TONE = {
   urgent:  'var(--bauxite-rust)',
@@ -89,6 +90,8 @@ export default function Coaching() {
         />
 
         <RecentSessionsCard sessions={data?.recent_sessions ?? []} />
+        {/* Phase 144 — coaching effectiveness scorecard */}
+        <CoachingEffectivenessCard summary={data?.effectiveness_summary} />
       </div>
 
       {composeFor && (

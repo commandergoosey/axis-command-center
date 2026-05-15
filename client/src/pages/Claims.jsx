@@ -23,6 +23,7 @@ import Modal from '../components/primitives/Modal';
 import Button from '../components/primitives/Button';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
+import ClaimsExposureChart from '../components/claims/ClaimsExposureChart';
 
 const STATUS_TONE = {
   filed:        'var(--text-secondary)',
@@ -82,6 +83,7 @@ export default function Claims() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <KpiStrip counts={data?.counts} />
         <FilterRow counts={data?.counts} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
+        <ClaimsExposureChart exposureByType={data?.exposure_by_type} />
 
         {!data ? (
           <p style={muted}>Loading…</p>
