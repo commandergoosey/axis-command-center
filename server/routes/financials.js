@@ -16,6 +16,7 @@ const { buildCovenants } = require('../services/covenants');
 const dscrService = require('../services/dscr');
 const roster = require('../state/roster');
 const receivableFollowups = require('../state/receivableFollowups');
+const { aggregate, CONTRACT } = require('../services/aggregator');
 const { writeAudit } = require('../db/audit');
 const { requireRole, requireAuth } = require('../middleware/auth');
 
@@ -30,6 +31,35 @@ router.get('/', (_req, res) => {
   // Phase 62 — DSCR now computed live from MTD revenue + debt service.
   // Falls back to static fixture if the math throws (defensive).
   const dscr = dscrService.compute(roster.list(), new Date());
+
+  // Phase 129 — per-hauler revenue contribution.
+  // Derived from the same aggregator used by the corridor view so numbers
+  // are always consistent. Revenue = tonnes_delivered_mtd × effective tariff.
+  // Outstanding receivable is allocated proportionally by contract_share.
+  const agg = aggregate(roster.list(), new Date());
+  const totalReceivable = PAYMENT_SECURITY.receivables.current_balance_usd ?? 0;
+  const byHauler = agg.haulers
+    .filter((h) => h.status === 'active')
+    .map((h) => {
+      const revenue_usd = Math.round(h.tonnes_delivered_mtd * CONTRACT.base_tariff_usd_per_tonne);
+      const receivable_usd = Math.round(totalReceivable * h.contract_share);
+      const total_revenue = agg.haulers
+        .filter((x) => x.status === 'active')
+        .reduce((s, x) => s + x.tonnes_delivered_mtd * CONTRACT.base_tariff_usd_per_tonne, 0);
+      const corridor_share_pct = total_revenue > 0
+        ? Number(((revenue_usd / total_revenue) * 100).toFixed(1))
+        : 0;
+      return {
+        hauler_id:          h.id,
+        display_name:       h.display_name,
+        tonnes_mtd:         h.tonnes_delivered_mtd,
+        tonnes_contracted:  h.tonnes_contracted_mtd,
+        sla_attainment_pct: h.performance.sla_attainment_pct,
+        revenue_usd,
+        receivable_usd,
+        corridor_share_pct,
+      };
+    });
 
   res.json({
     generated_at: new Date().toISOString(),
@@ -57,6 +87,7 @@ router.get('/', (_req, res) => {
       followup_counts: receivableFollowups.countsByBand(),
     },
     cashflow: CASHFLOW_FORECAST,
+    by_hauler: byHauler,   // Phase 129
   });
 });
 

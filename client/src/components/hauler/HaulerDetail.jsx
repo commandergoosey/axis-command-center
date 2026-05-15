@@ -108,6 +108,11 @@ export default function HaulerDetail({ hauler, open, onClose, onSynced }) {
           <Row label="Safety score" value={hauler.status === 'active' ? hauler.performance.safety_score : '—'} />
         </Section>
 
+        {/* Phase 133 — SLA monthly scorecard */}
+        {hauler.status === 'active' && (
+          <SlaScorecard hauler={hauler} />
+        )}
+
         <Section title="Integration">
           <Row label="Type" value={INTEGRATION_LABEL[hauler.integration.type] ?? hauler.integration.type} />
           <Row
@@ -684,4 +689,98 @@ function runRate(hauler) {
   if (hauler.status !== 'active' || hauler.tonnes_contracted_mtd === 0) return '—';
   const pct = (hauler.tonnes_delivered_mtd / hauler.tonnes_contracted_mtd) * 100;
   return formatPercent(pct, 1);
+}
+
+/* ── Phase 133: SLA monthly scorecard ──────────────────────────────── */
+const TARIFF_PER_TONNE = 24.00;   // $24.00 / tonne — Tranche 1 base
+const FLOOR_PCT = 0.80;           // 80% take-or-pay floor
+
+function SlaScorecard({ hauler }) {
+  const sla         = hauler.performance.sla_attainment_pct ?? 0;
+  const onTime      = hauler.performance.on_time_pct ?? 0;
+  const delivered   = hauler.tonnes_delivered_mtd ?? 0;
+  const contracted  = hauler.tonnes_contracted_mtd ?? 0;
+  const floor       = Math.round(contracted * FLOOR_PCT);
+  const revenue     = Math.round(delivered * TARIFF_PER_TONNE);
+  const aboveFloor  = delivered >= floor;
+  const attainPct   = contracted > 0 ? Math.min(100, (delivered / contracted) * 100) : 0;
+  const floorPct    = contracted > 0 ? Math.min(100, (floor / contracted) * 100) : 80;
+
+  const slaColor    = sla >= 90 ? 'var(--signal-green)' : sla >= 75 ? 'var(--signal-amber)' : 'var(--bauxite-rust)';
+  const floorColor  = aboveFloor ? 'var(--signal-green)' : 'var(--bauxite-rust)';
+
+  return (
+    <section style={{
+      background: 'var(--surface)',
+      border: '1px solid var(--border-hairline)',
+      borderRadius: 'var(--radius-md)',
+      padding: 'var(--space-3) var(--space-4)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 'var(--space-3)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span className="eyebrow" style={{ color: 'var(--text-tertiary)' }}>SLA scorecard · MTD</span>
+        <span className="mono" style={{
+          fontSize: 9, letterSpacing: '0.08em', padding: '1px 6px',
+          background: 'rgba(139,46,26,0.06)', border: '1px solid rgba(139,46,26,0.2)',
+          borderRadius: 2, color: 'var(--bauxite-rust)',
+        }}>MODELLED</span>
+      </div>
+
+      {/* Tonnage progress bar */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 'var(--ts-caption-size)', color: 'var(--text-secondary)' }}>
+          <span>MTD throughput</span>
+          <span className="tabular">{delivered.toLocaleString()} / {contracted.toLocaleString()} t</span>
+        </div>
+        <div style={{ position: 'relative', height: 8, background: 'var(--border-hairline)', borderRadius: 4, overflow: 'hidden' }}>
+          {/* Floor marker */}
+          <div style={{
+            position: 'absolute', left: `${floorPct}%`, top: 0, bottom: 0,
+            width: 2, background: 'var(--signal-amber)', zIndex: 1,
+          }} title="Take-or-pay floor" />
+          {/* Fill */}
+          <div style={{
+            height: '100%',
+            width: `${attainPct}%`,
+            background: aboveFloor ? 'var(--signal-green)' : 'var(--bauxite-rust)',
+            borderRadius: 4,
+            transition: 'width 400ms ease',
+          }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 10, color: 'var(--text-tertiary)' }}>
+          <span style={{ color: floorColor }}>
+            {aboveFloor ? '✓ Above floor' : '⚠ Below floor'}
+            {' · floor = '}{floor.toLocaleString()} t
+          </span>
+          <span className="tabular">{attainPct.toFixed(1)}%</span>
+        </div>
+      </div>
+
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-2)' }}>
+        {[
+          { label: 'SLA attainment', value: `${sla.toFixed(1)}%`, color: slaColor },
+          { label: 'On-time rate',   value: `${onTime.toFixed(0)}%`, color: onTime >= 90 ? 'var(--signal-green)' : onTime >= 80 ? 'var(--signal-amber)' : 'var(--bauxite-rust)' },
+          { label: 'Revenue MTD',    value: revenue >= 1_000_000 ? `$${(revenue/1_000_000).toFixed(2)}M` : `$${Math.round(revenue/1000)}K`, color: 'var(--text)' },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{
+            background: 'var(--surface-raised)',
+            border: '1px solid var(--border-hairline)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '8px 10px',
+            display: 'flex', flexDirection: 'column', gap: 3,
+          }}>
+            <span style={{ fontSize: 9, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {label}
+            </span>
+            <span className="tabular" style={{ fontSize: 'var(--ts-body-size)', fontWeight: 'var(--fw-semibold)', color }}>
+              {value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }

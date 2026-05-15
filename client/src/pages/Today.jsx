@@ -78,7 +78,7 @@ export default function Today() {
     >
       {/* ── Left column ─────────────────────────────────────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-        <HeroPanel corridor={snapshot?.corridor} />
+        <HeroPanel corridor={snapshot?.corridor} health={snapshot?.health} />
 
         {error && <ErrorStrip message={error} />}
 

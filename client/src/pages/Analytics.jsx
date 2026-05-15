@@ -20,7 +20,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
-  ResponsiveContainer,
+  ResponsiveContainer, ComposedChart,
 } from 'recharts';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
@@ -82,11 +82,12 @@ export default function Analytics() {
 
   useEffect(() => { load(); }, [load]);
 
-  const weeks       = data?.weeks       ?? [];
-  const ytd         = data?.ytd         ?? {};
-  const c           = data?.contract    ?? {};
-  const haulerTotals = data?.hauler_totals ?? [];
-  const todayLive   = data?.today_live  ?? null;
+  const weeks            = data?.weeks            ?? [];
+  const ytd              = data?.ytd              ?? {};
+  const c                = data?.contract         ?? {};
+  const haulerTotals     = data?.hauler_totals    ?? [];
+  const todayLive        = data?.today_live       ?? null;
+  const haulerAttainment = data?.hauler_attainment ?? [];
 
   // Filter hauler breakdown if hauler_admin: only show their own hauler
   const isHaulerAdmin = user?.role === 'hauler_admin';
@@ -405,6 +406,16 @@ export default function Analytics() {
           />
         </Panel>
 
+        {/* ── Phase 130: Per-hauler SLA & MTD attainment ────────── */}
+        {!isHaulerAdmin && haulerAttainment.length > 0 && (
+          <Panel
+            title="Hauler SLA & MTD throughput"
+            sub="Contracted vs actual tonnes MTD · SLA attainment % (right axis)"
+          >
+            <HaulerAttainmentChart rows={haulerAttainment} />
+          </Panel>
+        )}
+
       </div>
     </PageShell>
   );
@@ -705,6 +716,105 @@ function TodayStat({ label, value }) {
       }}>
         {value}
       </span>
+    </div>
+  );
+}
+
+/* ── Phase 130: Hauler SLA & MTD attainment chart ─────────────────── */
+
+const SLA_REF_COLOR  = 'rgba(46,107,63,0.45)';
+const SLA_WARN_COLOR = 'rgba(217,158,55,0.8)';
+
+function HaulerAttainmentChart({ rows }) {
+  if (!rows.length) return null;
+
+  // Build chart data: contracted (grey), actual (rust), SLA% (line, right axis)
+  const chartData = rows.map((h) => ({
+    name:        h.display_name.replace(/\s+Haulage.*/, '').replace(/\s+Transport.*/, ''),
+    contracted:  h.tonnes_contracted,
+    actual:      h.tonnes_mtd,
+    sla:         h.sla_attainment_pct,
+    on_time:     h.on_time_pct,
+  }));
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 'var(--space-4)', alignItems: 'start' }}>
+      <ResponsiveContainer width="100%" height={220}>
+        <ComposedChart data={chartData} margin={{ top: 8, right: 48, bottom: 0, left: 12 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-hairline)" vertical={false} />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: 10, fill: 'var(--text-secondary)', fontFamily: 'var(--font-primary)' }}
+            axisLine={false}
+            tickLine={false}
+          />
+          {/* Left axis — tonnes */}
+          <YAxis
+            yAxisId="t"
+            tick={{ fontSize: 9, fill: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+          />
+          {/* Right axis — SLA % */}
+          <YAxis
+            yAxisId="pct"
+            orientation="right"
+            domain={[0, 100]}
+            tick={{ fontSize: 9, fill: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(v) => `${v}%`}
+          />
+          <Tooltip
+            contentStyle={{
+              background: 'var(--surface-raised)',
+              border: '1px solid var(--border-hairline)',
+              borderRadius: 4,
+              fontSize: 11,
+              fontFamily: 'var(--font-mono)',
+            }}
+            formatter={(val, name) => {
+              if (name === 'sla' || name === 'on_time') return [`${val}%`, name === 'sla' ? 'SLA' : 'On-time'];
+              return [`${Math.round(val).toLocaleString()} t`, name === 'actual' ? 'Actual' : 'Contracted'];
+            }}
+          />
+          {/* SLA 90% reference */}
+          <ReferenceLine yAxisId="pct" y={90} stroke={SLA_REF_COLOR} strokeDasharray="3 2" />
+          {/* Contracted — grey outline bar */}
+          <Bar yAxisId="t" dataKey="contracted" fill="var(--border-soft)" radius={[2, 2, 0, 0]} name="contracted" />
+          {/* Actual — rust fill bar */}
+          <Bar yAxisId="t" dataKey="actual" fill="var(--bauxite-rust)" fillOpacity={0.85} radius={[2, 2, 0, 0]} name="actual" />
+          {/* SLA line */}
+          <Line
+            yAxisId="pct"
+            type="monotone"
+            dataKey="sla"
+            stroke="var(--signal-green)"
+            strokeWidth={2}
+            dot={{ r: 4, fill: 'var(--signal-green)', strokeWidth: 0 }}
+            activeDot={{ r: 5 }}
+            name="sla"
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 12 }}>
+        {[
+          { color: 'var(--border-soft)', label: 'Contracted MTD' },
+          { color: 'var(--bauxite-rust)', label: 'Actual MTD' },
+          { color: 'var(--signal-green)', label: 'SLA %', line: true },
+        ].map(({ color, label, line }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+            {line
+              ? <div style={{ width: 16, height: 2, background: color, borderRadius: 1 }} />
+              : <div style={{ width: 10, height: 10, background: color, borderRadius: 2 }} />
+            }
+            {label}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

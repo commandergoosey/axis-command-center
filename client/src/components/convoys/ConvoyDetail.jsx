@@ -66,6 +66,87 @@ export default function ConvoyDetail({ convoyId, open, onClose }) {
   );
 }
 
+/* ── Phase 132: Convoy milestone stepper ─────────────────────────────
+ * Five-step horizontal progress indicator: Loading → Laden (en route) →
+ * Offloading → Complete. Active step highlighted in rust; completed steps
+ * green; future steps greyed. Sits between the header and the dispatch section
+ * so operators read the lifecycle position immediately on open.
+ */
+const STEPPER_PHASES = [
+  { key: 'loading', label: 'Loading' },
+  { key: 'laden',   label: 'Laden · en route' },
+  { key: 'offload', label: 'Offloading' },
+  { key: 'empty',   label: 'Empty return' },
+  { key: 'complete',label: 'Complete' },
+];
+
+function PhaseStepper({ phase }) {
+  const idx = STEPPER_PHASES.findIndex((s) => s.key === phase);
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 0,
+      marginBottom: 'var(--space-4)',
+      background: 'var(--surface)',
+      border: '1px solid var(--border-hairline)',
+      borderRadius: 'var(--radius-md)',
+      padding: '10px 12px',
+      overflowX: 'auto',
+    }}>
+      {STEPPER_PHASES.map((step, i) => {
+        const done    = i < idx;
+        const active  = i === idx;
+        const pending = i > idx;
+        const color   = active  ? 'var(--bauxite-rust)'
+                      : done    ? 'var(--signal-green)'
+                      : 'var(--text-tertiary)';
+        return (
+          <div key={step.key} style={{ display: 'flex', alignItems: 'center', flex: i < STEPPER_PHASES.length - 1 ? 1 : 0, minWidth: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              {/* Circle */}
+              <div style={{
+                width: 18, height: 18, borderRadius: '50%',
+                background: pending ? 'transparent' : color,
+                border: `2px solid ${pending ? 'var(--border-soft)' : color}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                {done && (
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                    <path d="M1 4 L3.5 6.5 L7 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              {/* Label */}
+              <span className="mono" style={{
+                fontSize: 9,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color,
+                whiteSpace: 'nowrap',
+                fontWeight: active ? 'var(--fw-semibold)' : 'normal',
+              }}>
+                {step.label}
+              </span>
+            </div>
+            {/* Connector */}
+            {i < STEPPER_PHASES.length - 1 && (
+              <div style={{
+                flex: 1,
+                height: 2,
+                background: done ? 'var(--signal-green)' : 'var(--border-hairline)',
+                margin: '0 4px',
+                marginTop: '-12px',   // align with circle centre
+              }} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Body({ data, navigate, onClose }) {
   const schedLag = lagMinutes(data.planned_departure_iso, data.actual_departure_iso);
   return (
@@ -102,6 +183,8 @@ function Body({ data, navigate, onClose }) {
           {data.notes ? ` · ${data.notes}` : ''}
         </p>
       </header>
+
+      <PhaseStepper phase={data.phase} />
 
       <Section title="Dispatch">
         <Row label="Direction" value={data.direction === 'northbound' ? 'Northbound · empty' : 'Southbound · laden'} />

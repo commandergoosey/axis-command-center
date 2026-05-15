@@ -18,6 +18,8 @@ const express      = require('express');
 const router       = express.Router();
 const analytics    = require('../services/corridorAnalytics');
 const convoyState  = require('../state/convoyState');
+const roster       = require('../state/roster');
+const { aggregate } = require('../services/aggregator');
 
 router.get('/', (req, res) => {
   try {
@@ -39,7 +41,29 @@ router.get('/', (req, res) => {
       };
     } catch (_) { /* non-fatal */ }
 
-    res.json({ ...base, today_live });
+    // Phase 130 — per-hauler SLA & throughput for the attainment chart.
+    // Merges live roster SLA records with the trailing analytics totals.
+    let hauler_attainment = null;
+    try {
+      const agg = aggregate(roster.list(), new Date());
+      const totalsById = Object.fromEntries(
+        (base.hauler_totals ?? []).map((h) => [h.hauler_id, h]),
+      );
+      hauler_attainment = agg.haulers
+        .filter((h) => h.status === 'active')
+        .map((h) => ({
+          hauler_id:           h.id,
+          display_name:        h.display_name,
+          tonnes_mtd:          h.tonnes_delivered_mtd,
+          tonnes_contracted:   h.tonnes_contracted_mtd,
+          sla_attainment_pct:  h.performance.sla_attainment_pct,
+          on_time_pct:         totalsById[h.id]?.on_time_pct ?? h.performance.sla_attainment_pct,
+          trailing_12w_tonnes: totalsById[h.id]?.tonnes ?? 0,
+          trailing_share_pct:  totalsById[h.id]?.share_pct ?? 0,
+        }));
+    } catch (_) { /* non-fatal */ }
+
+    res.json({ ...base, today_live, hauler_attainment });
   } catch (err) {
     console.error('[analytics]', err);
     res.status(500).json({ error: 'Analytics composition failed' });

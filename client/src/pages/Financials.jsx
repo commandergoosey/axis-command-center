@@ -14,6 +14,7 @@ import PnLSnapshot         from '../components/financials/PnLSnapshot';
 import CovenantTable       from '../components/financials/CovenantTable';
 import CashflowForecast    from '../components/financials/CashflowForecast';
 import ReceivablesPanel    from '../components/financials/ReceivablesPanel';
+import HaulerRevenueStrip  from '../components/financials/HaulerRevenueStrip';
 import IntelligencePanel   from '../components/intelligence/IntelligencePanel';
 
 export default function Financials() {
@@ -88,6 +89,7 @@ export default function Financials() {
           <CovenantTable covenants={data?.covenants} />
         </div>
         <ReceivablesPanel receivables={data?.receivables} onMutate={load} />
+        <HaulerRevenueStrip haulers={data?.by_hauler} />
         <CashflowForecast weeks={data?.cashflow} />
         <IntelligencePanel page="financials" />
       </div>
