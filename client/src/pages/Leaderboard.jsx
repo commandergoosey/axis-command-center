@@ -20,6 +20,7 @@ import { Trophy, Shield, Truck, Clock, AlertTriangle } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
+import FatigueMonitorStrip from '../components/drivers/FatigueMonitorStrip';
 
 /* ── Medal colours ───────────────────────────────────────────────── */
 const MEDAL = {
@@ -121,6 +122,7 @@ export default function Leaderboard() {
   const podiums      = data?.podiums       ?? {};
   const corridorAvg  = data?.corridor_avg  ?? { safety: 0, trips: 0, hours: 0 };
   const livecorridor = data?.live_corridor ?? null;
+  const fatigueFlags = data?.fatigue_flags ?? [];
 
   return (
     <PageShell
@@ -207,6 +209,11 @@ export default function Leaderboard() {
               />
             ))}
           </div>
+        )}
+
+        {/* ── Phase 143: fatigue monitor ──────────────────────────── */}
+        {fatigueFlags.length > 0 && (
+          <FatigueMonitorStrip flags={fatigueFlags} />
         )}
 
         {/* ── Full ranking table ───────────────────────────────────── */}

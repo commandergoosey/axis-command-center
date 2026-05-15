@@ -95,11 +95,38 @@ router.get('/', requireAuth, (req, res) => {
     return m;
   }, { total: 0, pending: 0, paid: 0, partial: 0, disputed: 0, outstanding_usd: 0, disputed_usd: 0 });
 
+  // Phase 142 — per-hauler ageing strip. For every non-paid statement,
+  // compute days outstanding from due_date → now and roll up per hauler
+  // so the client can render an ageing urgency bar without a second fetch.
+  const haulerIndex = Object.fromEntries(roster.list().map((h) => [h.id, h.display_name]));
+  const agingMap = {};
+  const now = new Date();
+  rows.filter((r) => r.status !== 'paid').forEach((r) => {
+    if (!r.due_date) return;
+    const daysO = Math.floor((now - new Date(r.due_date)) / 86_400_000);
+    if (!agingMap[r.hauler_id]) {
+      agingMap[r.hauler_id] = {
+        hauler_id:            r.hauler_id,
+        hauler_display:       haulerIndex[r.hauler_id] ?? r.hauler_id,
+        outstanding_usd:      0,
+        statement_count:      0,
+        oldest_days_outstanding: 0,
+      };
+    }
+    const a = agingMap[r.hauler_id];
+    a.outstanding_usd += r.net_usd;
+    a.statement_count++;
+    a.oldest_days_outstanding = Math.max(a.oldest_days_outstanding, daysO);
+  });
+  const hauler_aging = Object.values(agingMap)
+    .sort((a, b) => b.oldest_days_outstanding - a.oldest_days_outstanding);
+
   res.json({
     generated_at: new Date().toISOString(),
     statements: rows,
     counts,
     periods: PERIODS,
+    hauler_aging,
   });
 });
 

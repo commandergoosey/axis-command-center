@@ -19,6 +19,7 @@ import { useAuth } from '../lib/AuthContext';
 import PageShell from '../components/layout/PageShell';
 import ConvoysSummary from '../components/convoys/ConvoysSummary';
 import ConvoyCorridorStrip from '../components/convoys/ConvoyCorridorStrip';
+import ConvoyETABoard from '../components/convoys/ConvoyETABoard';
 import ConvoyTable from '../components/convoys/ConvoyTable';
 import ConvoyDetail from '../components/convoys/ConvoyDetail';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
@@ -501,6 +502,9 @@ export default function Convoys() {
         <ConvoysSummary summary={data?.summary} />
         <PhaseSummaryStrip phaseData={data?.summary?.convoy_by_phase} />
         <ConvoyCorridorStrip convoys={filtered} lengthKm={lengthKm} />
+
+        {/* Phase 140 — arrival countdown board */}
+        <ConvoyETABoard convoys={data?.convoys} />
 
         <FilterBar
           hauler={hauler}     setHauler={setHauler}

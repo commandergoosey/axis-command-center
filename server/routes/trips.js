@@ -79,12 +79,40 @@ router.get('/', (req, res) => {
 
   const trips = [...liveTrips, ...mockTrips].slice(0, limit);
 
+  // Phase 141 — 12-week rolling cost-efficiency trend. Groups mock trips
+  // by ISO week (Monday-based) and computes avg cost/tonne + delay rate
+  // per week. The last 12 complete weeks are returned in ascending order.
+  const byWeek = {};
+  filtered.forEach((t) => {
+    const d = new Date(t.departed_at ?? t.completed_at ?? 0);
+    const mon = new Date(d);
+    mon.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); // ISO Mon
+    mon.setUTCHours(0, 0, 0, 0);
+    const key = mon.toISOString().slice(0, 10);
+    if (!byWeek[key]) byWeek[key] = { week: key, trips: 0, cost_usd: 0, tonnes: 0, delayed: 0 };
+    const w = byWeek[key];
+    w.trips++;
+    w.cost_usd += t.cost?.total_usd ?? 0;
+    w.tonnes   += t.tonnage_t ?? 0;
+    if ((t.delay_min ?? 0) > 0) w.delayed++;
+  });
+  const cost_trend = Object.values(byWeek)
+    .sort((a, b) => a.week.localeCompare(b.week))
+    .slice(-12)
+    .map((w) => ({
+      week:               w.week,
+      avg_cost_per_tonne: w.tonnes > 0 ? Number((w.cost_usd / w.tonnes).toFixed(2)) : null,
+      trip_count:         w.trips,
+      delay_rate_pct:     w.trips > 0 ? Number(((w.delayed / w.trips) * 100).toFixed(1)) : 0,
+    }));
+
   res.json({
     count: liveTrips.length + filtered.length,
     hauler_id: haulerId,
     trips,
     cost_per_route: Object.values(byRoute).sort((a, b) => b.trips - a.trips),
     delay_heatmap: delayHeatmap(filtered),
+    cost_trend,
   });
 });
 

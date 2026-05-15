@@ -24,6 +24,7 @@ import Modal from '../components/primitives/Modal';
 import MitigationSteps from '../components/risks/MitigationSteps';
 import RiskComments from '../components/risks/RiskComments';
 import PinButton from '../components/primitives/PinButton';
+import RiskMatrix from '../components/risks/RiskMatrix';
 
 const SEVERITY_TONE = {
   critical: 'var(--bauxite-rust)',
@@ -117,6 +118,16 @@ export default function Risks() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <KpiStrip counts={data?.counts} />
+        {/* Phase 139 — heat matrix above the filter + table */}
+        <RiskMatrix
+          matrix={data?.matrix}
+          onCellClick={(likelihood, severity) =>
+            setFilters((f) => ({
+              ...f,
+              severity: f.severity === severity ? null : severity,
+            }))
+          }
+        />
         <FilterChips filters={filters} setFilters={setFilters} />
 
         {filteredRisks.length === 0 ? (

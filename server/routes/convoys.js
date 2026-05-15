@@ -37,10 +37,45 @@ const STATUS_ROLES   = ['axis_admin', 'axis_ops', 'hauler_admin'];
 
 // ── Helpers ────────────────────────────────────────────────────────
 
+// Phase 140 — ETA computation for active convoys. Laden transit is
+// ~16 h over 300 km; loading waiting time adds ~4 h before departure;
+// offload is 2 h at port. Northbound (empty) runs are excluded — no
+// delivery ETA is relevant for the return leg.
+const ETA_LADEN_H   = 16;   // Nyinahin → Takoradi transit
+const ETA_LOADING_H = 20;   // waiting + transit from planned departure
+const ETA_OFFLOAD_H = 2;    // remaining time to clear offload
+
+function computeETA(c) {
+  if (c.direction !== 'southbound') return { eta_iso: null, eta_minutes_remaining: null, eta_status: null };
+  const nowMs = Date.now();
+  let etaMs = null;
+
+  if (c.phase === 'laden' && c.actual_departure_iso) {
+    etaMs = new Date(c.actual_departure_iso).getTime() + ETA_LADEN_H * 3_600_000;
+  } else if (c.phase === 'loading') {
+    const ref = c.planned_departure_iso ?? c.dispatched_at;
+    if (ref) etaMs = new Date(ref).getTime() + ETA_LOADING_H * 3_600_000;
+  } else if (c.phase === 'offload' && c.actual_departure_iso) {
+    etaMs = new Date(c.actual_departure_iso).getTime() + (ETA_LADEN_H + ETA_OFFLOAD_H) * 3_600_000;
+  }
+
+  if (!etaMs) return { eta_iso: null, eta_minutes_remaining: null, eta_status: null };
+  const minutesRemaining = Math.round((etaMs - nowMs) / 60_000);
+  const eta_status = minutesRemaining < 0
+    ? 'overdue'
+    : minutesRemaining < 120 ? 'imminent' : 'en_route';
+  return {
+    eta_iso:              new Date(etaMs).toISOString(),
+    eta_minutes_remaining: minutesRemaining,
+    eta_status,
+  };
+}
+
 function enrichConvoy(c, haulersById) {
   return {
     ...c,
     hauler_display_name: haulersById[c.hauler_id] ?? c.hauler_id,
+    ...computeETA(c),
   };
 }
 

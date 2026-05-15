@@ -24,6 +24,7 @@ import {
 import PageShell from '../components/layout/PageShell';
 import Modal from '../components/primitives/Modal';
 import Button from '../components/primitives/Button';
+import SettlementAgeingStrip from '../components/settlements/SettlementAgeingStrip';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 
@@ -143,6 +144,8 @@ export default function Settlements() {
           </div>
         )}
         <KpiStrip counts={data?.counts} />
+        {/* Phase 142 — per-hauler ageing strip */}
+        <SettlementAgeingStrip haulerAging={data?.hauler_aging} />
         {ageing && <AgeingPanel ageing={ageing} />}
         <FilterRow
           periods={data?.periods ?? []}

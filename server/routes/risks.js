@@ -35,9 +35,24 @@ router.get('/', requireAuth, (_req, res) => {
     steps_summary:    stepCounts[r.id]    || { done_count: 0, total_count: 0, open_count: 0 },
     comments_summary: { count: commentCounts[r.id] || 0 },
   }));
+
+  // Phase 139 — likelihood × severity heat matrix. Each cell counts open
+  // (non-closed) risks so the matrix reflects live exposure, not history.
+  const LIKELIHOOD_ORDER = ['rare', 'unlikely', 'possible', 'likely', 'almost_certain'];
+  const SEVERITY_ORDER   = ['low', 'medium', 'high', 'critical'];
+  const openRisks = risks.filter((r) => r.status !== 'closed');
+  const matrix = LIKELIHOOD_ORDER.map((l) => ({
+    likelihood: l,
+    cells: SEVERITY_ORDER.map((s) => ({
+      severity: s,
+      count: openRisks.filter((r) => r.likelihood === l && r.severity === s).length,
+    })),
+  }));
+
   res.json({
     risks,
     counts: riskRegister.counts(),
+    matrix,
   });
 });
 

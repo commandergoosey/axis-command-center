@@ -15,6 +15,7 @@ import PageShell from '../components/layout/PageShell';
 import HaulerFilter from '../components/trips/HaulerFilter';
 import CostPerRouteCard from '../components/trips/CostPerRouteCard';
 import DelayHeatmap from '../components/trips/DelayHeatmap';
+import CostEfficiencyTrend from '../components/trips/CostEfficiencyTrend';
 import TripsTable from '../components/trips/TripsTable';
 import TripDetail from '../components/trips/TripDetail';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
@@ -128,6 +129,11 @@ export default function Trips() {
         anyFilter={anyFilter}
         onClear={() => { setDirection(''); setStatus(''); }}
       />
+
+      {/* Phase 141 — cost efficiency trend above the ledger */}
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <CostEfficiencyTrend trend={data?.cost_trend} />
+      </div>
 
       <TripsTable trips={filteredTrips} onRowClick={(t) => setSelectedId(t.id)} />
 

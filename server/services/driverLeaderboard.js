@@ -100,6 +100,28 @@ function compose(haulerFilter = null) {
     hours:  avg(corridorAll, 'hours_this_week'),
   };
 
+  // Phase 143 — fatigue flags: drivers approaching the 70h weekly HOS
+  // ceiling. Advisory only — operators must verify against driver logs.
+  const HOS_WARN_H     = 60;  // WATCH threshold (hours this week)
+  const HOS_WARNING_H  = 65;  // WARNING
+  const HOS_CRITICAL_H = 68;  // CRITICAL (within 2h of ceiling)
+  const HOS_CEILING_H  = 70;
+
+  const fatigue_flags = pool
+    .filter((d) => (d.hours_this_week ?? 0) >= HOS_WARN_H)
+    .map((d) => ({
+      driver_id:       d.id,
+      full_name:       d.full_name,
+      hauler_id:       d.hauler_id,
+      hauler_display:  d.hauler_display,
+      hours_this_week: d.hours_this_week ?? 0,
+      hours_to_limit:  Math.max(0, HOS_CEILING_H - (d.hours_this_week ?? 0)),
+      severity: (d.hours_this_week ?? 0) >= HOS_CRITICAL_H ? 'CRITICAL'
+              : (d.hours_this_week ?? 0) >= HOS_WARNING_H  ? 'WARNING'
+              : 'WATCH',
+    }))
+    .sort((a, b) => b.hours_this_week - a.hours_this_week);
+
   // Phase 136 — live corridor context: today's convoy activity blended in
   // so the Leaderboard page can show live ops alongside driver rankings.
   // Advisory: failure returns zeroes so the page always has a valid shape.
@@ -128,6 +150,7 @@ function compose(haulerFilter = null) {
     corridor_avg:  corridorAvg,
     rankings,
     live_corridor,
+    fatigue_flags,
   };
 }
 
