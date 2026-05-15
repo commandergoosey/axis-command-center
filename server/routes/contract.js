@@ -12,6 +12,7 @@ const router = express.Router();
 const { aggregate, CONTRACT } = require('../services/aggregator');
 const roster = require('../state/roster');
 const convoyState = require('../state/convoyState');
+const forecastAnomalies = require('../services/forecastAnomalies');
 const {
   DELIVERY_HISTORY,
   SLA_BREAKDOWN,
@@ -144,6 +145,12 @@ router.get('/', (_req, res) => {
         overdue_pct: overduePct,
       },
     },
+    // Phase 151 — forecast anomaly alerts. Each anomaly carries
+    // { id, severity, body } consistent with intelligence observations.
+    // Non-fatal: returns [] when history is too shallow for detection.
+    anomalies: (() => {
+      try { return forecastAnomalies.detect(); } catch (_) { return []; }
+    })(),
   });
 });
 

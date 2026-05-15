@@ -21,6 +21,7 @@ import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import FatigueMonitorStrip from '../components/drivers/FatigueMonitorStrip';
+import HOSTrendChart       from '../components/drivers/HOSTrendChart';
 
 /* ── Medal colours ───────────────────────────────────────────────── */
 const MEDAL = {
@@ -215,6 +216,9 @@ export default function Leaderboard() {
         {fatigueFlags.length > 0 && (
           <FatigueMonitorStrip flags={fatigueFlags} />
         )}
+
+        {/* ── Phase 153: HOS 8-week trend ─────────────────────────── */}
+        <HOSTrendChart hosTrend={data?.hos_trend} />
 
         {/* ── Full ranking table ───────────────────────────────────── */}
         <section>

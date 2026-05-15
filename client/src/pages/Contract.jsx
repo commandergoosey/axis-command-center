@@ -13,6 +13,7 @@ import ContractTermsStrip    from '../components/contract/ContractTermsStrip';
 import TakeOrPayGauge        from '../components/contract/TakeOrPayGauge';
 import CumulativeTonnageChart from '../components/contract/CumulativeTonnageChart';
 import RunRatePanel          from '../components/contract/RunRatePanel';
+import ForecastAnomalyStrip  from '../components/contract/ForecastAnomalyStrip';
 import SLAMeter              from '../components/contract/SLAMeter';
 import PaymentSecurityCard   from '../components/contract/PaymentSecurityCard';
 import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
@@ -67,6 +68,11 @@ export default function Contract() {
         </div>
 
         <RunRatePanel mtd={data?.mtd} />
+
+        {/* Phase 151 — forecast anomaly alerts */}
+        {data?.anomalies?.length > 0 && (
+          <ForecastAnomalyStrip anomalies={data.anomalies} />
+        )}
 
         <div style={{
           display: 'grid',

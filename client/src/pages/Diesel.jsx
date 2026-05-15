@@ -22,6 +22,7 @@ import {
 import { Fuel, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, CalendarRange } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
+import BurnEfficiencyStrip from '../components/diesel/BurnEfficiencyStrip';
 
 export default function Diesel() {
   const [data, setData]   = useState(null);
@@ -66,6 +67,12 @@ export default function Diesel() {
           </div>
 
           <FleetBurn fleet={data.fleet_burn} />
+
+          {/* Phase 149 — burn efficiency ranking: worst haulers at top */}
+          <BurnEfficiencyStrip
+            burnRanking={data.burn_ranking}
+            corridorAvg={data.fleet_burn?.corridor_avg_fuel_usd_per_tonne}
+          />
 
           {/* Phase 115 — actual fill events from Phase 111 fuel logs */}
           <ActualBurnsPanel burns={data.actual_burns} />

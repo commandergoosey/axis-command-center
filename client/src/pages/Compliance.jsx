@@ -12,8 +12,9 @@ import AxleLoadSummary    from '../components/compliance/AxleLoadSummary';
 import AxleEventsTable    from '../components/compliance/AxleEventsTable';
 import CoachingLog        from '../components/compliance/CoachingLog';
 import HSEPanel           from '../components/compliance/HSEPanel';
-import LicencePipeline    from '../components/compliance/LicencePipeline';
-import FilingsTracker     from '../components/reports/FilingsTracker';
+import LicencePipeline          from '../components/compliance/LicencePipeline';
+import DeadlineCountdownStrip   from '../components/compliance/DeadlineCountdownStrip';
+import FilingsTracker            from '../components/reports/FilingsTracker';
 import FilingDetailDrawer from '../components/reports/FilingDetailDrawer';
 import IntelligencePanel  from '../components/intelligence/IntelligencePanel';
 
@@ -66,6 +67,8 @@ export default function Compliance() {
         </div>
         <AxleEventsTable events={data?.axle?.events} onHoldLogged={load} />
         <CoachingLog />
+        {/* Phase 150 — unified deadline countdown: licences + filings */}
+        <DeadlineCountdownStrip deadlines={data?.upcoming_deadlines} />
         <LicencePipeline items={data?.licence_expiry} onRenewed={load} />
         <FilingsTracker
           filings={data?.filings ?? []}

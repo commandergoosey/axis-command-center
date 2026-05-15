@@ -276,6 +276,41 @@ router.get('/', (_req, res) => {
     { holds: 0, warnings: 0, delay_min_total: 0 },
   );
 
+  // Phase 150 — unified compliance deadline countdown.
+  // Merges driver licences (already filtered to ≤90d) with regulatory
+  // filings that are not yet FILED, sorted urgency-first so operators
+  // see what needs action before they dig into detail panels.
+  const filingDeadlines = mergedFilings()
+    .filter((f) => f.status !== 'FILED')
+    .map((f) => {
+      const daysRem = Math.round((new Date(f.due).getTime() - now) / 86_400_000);
+      return {
+        id:             f.id,
+        kind:           'filing',
+        label:          f.detail,
+        agency:         f.agency,
+        days_remaining: daysRem,
+        due_date:       f.due,
+        status:         f.status,
+        overdue:        daysRem < 0,
+      };
+    })
+    .filter((d) => d.days_remaining <= 90);
+
+  const licenceDeadlines = licenceExpiry.map((l) => ({
+    id:             l.id,
+    kind:           'licence',
+    label:          `${l.driver} — ${l.document}`,
+    hauler_display: l.hauler_display_name,
+    days_remaining: l.days_remaining,
+    due_date:       l.expiry,
+    status:         l.renewed ? 'RENEWED' : 'DUE',
+    overdue:        l.days_remaining < 0,
+  }));
+
+  const upcoming_deadlines = [...filingDeadlines, ...licenceDeadlines]
+    .sort((a, b) => a.days_remaining - b.days_remaining);
+
   res.json({
     generated_at: new Date().toISOString(),
     axle: {
@@ -290,6 +325,7 @@ router.get('/', (_req, res) => {
     hse,
     licence_expiry: licenceExpiry,
     filings: mergedFilings(),
+    upcoming_deadlines,
   });
 });
 

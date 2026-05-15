@@ -42,6 +42,28 @@ router.get('/', (_req, res) => {
       : Number((row.effective_usd_per_tonne - history[i - 1].effective_usd_per_tonne).toFixed(2)),
   }));
 
+  // Phase 152 — per-component USD breakdown per month.
+  // Decomposes the effective rate into fuel / CPI / fixed contributions
+  // proportional to their unclamped weight shares. When the multiplier
+  // is clamped, the proportions still sum to the actual effective rate,
+  // giving a stacked bar chart a clean baseline.
+  const indexWeights = {
+    fuel:  CONTRACT.indexation.fuel_pct_of_tariff,
+    cpi:   CONTRACT.indexation.cpi_pct_of_tariff,
+    fixed: CONTRACT.indexation.fixed_pct_of_tariff,
+  };
+  const component_history = historyWithDeltas.map((h) => {
+    const rawFuel  = indexWeights.fuel  * h.fuel_index;
+    const rawCpi   = indexWeights.cpi   * h.cpi_index;
+    const rawFixed = indexWeights.fixed * 1.0;
+    const rawTotal = rawFuel + rawCpi + rawFixed;
+    const eff = h.effective_usd_per_tonne;
+    const fuel_usd  = rawTotal > 0 ? Number((eff * rawFuel  / rawTotal).toFixed(2)) : 0;
+    const cpi_usd   = rawTotal > 0 ? Number((eff * rawCpi   / rawTotal).toFixed(2)) : 0;
+    const fixed_usd = Number((eff - fuel_usd - cpi_usd).toFixed(2));
+    return { month: h.month, fuel_usd, cpi_usd, fixed_usd, effective_usd_per_tonne: eff };
+  });
+
   res.json({
     generated_at: new Date().toISOString(),
     base: {
@@ -57,6 +79,7 @@ router.get('/', (_req, res) => {
     components:                   calc.components,
     next_review:                  nextReview,
     effective_rate_history:       historyWithDeltas,
+    component_history,
     npa_diesel: NPA_DIESEL,
     gss_cpi:    GSS_CPI,
     terms:      TARIFF_TERMS,

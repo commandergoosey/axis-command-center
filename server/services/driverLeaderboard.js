@@ -27,6 +27,12 @@ const { DRIVERS } = require('../mock/drivers');
 const convoyState  = require('../state/convoyState');
 const dailyTargets = require('../state/dailyTargets');
 
+// Phase 153 — deterministic pseudo-random seed (same pattern as health_history).
+function seeded(n) {
+  const raw = Math.sin(n * 9301 + 49297) * 233280;
+  return raw - Math.floor(raw);
+}
+
 function normalise(val, max) {
   if (!max) return 0;
   return (val / max) * 100;
@@ -137,6 +143,36 @@ function compose(haulerFilter = null) {
     };
   } catch { /* non-fatal */ }
 
+  // Phase 153 — 8-week HOS tier count trend (seeded, stable across requests).
+  // Shows week-by-week distribution of CRITICAL / WARNING / WATCH / OK drivers
+  // so ops can spot whether HOS pressure is trending worse over time.
+  const now = new Date();
+  const totalDrivers = all.length;
+  const hos_trend = [];
+  for (let w = 7; w >= 0; w--) {
+    const ref = new Date(now.getTime() - w * 7 * 86_400_000);
+    // Align to Monday (ISO week start)
+    const monday = new Date(ref);
+    monday.setUTCDate(ref.getUTCDate() - ((ref.getUTCDay() + 6) % 7));
+    const weekLabel = monday.toISOString().slice(0, 10);
+    const wk = monday.getUTCFullYear() * 1000
+             + monday.getUTCMonth()    *   31
+             + monday.getUTCDate();
+
+    const critCount    = Math.round(totalDrivers * (0.04 + seeded(wk + 1111) * 0.06));
+    const warningCount = Math.round(totalDrivers * (0.06 + seeded(wk + 2222) * 0.08));
+    const watchCount   = Math.round(totalDrivers * (0.09 + seeded(wk + 3333) * 0.10));
+    const okCount      = Math.max(0, totalDrivers - critCount - warningCount - watchCount);
+    hos_trend.push({
+      week:     weekLabel,
+      critical: critCount,
+      warning:  warningCount,
+      watch:    watchCount,
+      ok:       okCount,
+      total:    totalDrivers,
+    });
+  }
+
   return {
     generated_at:  new Date().toISOString(),
     period:        'This week',
@@ -151,6 +187,7 @@ function compose(haulerFilter = null) {
     rankings,
     live_corridor,
     fatigue_flags,
+    hos_trend,
   };
 }
 

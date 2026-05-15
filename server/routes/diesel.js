@@ -33,7 +33,25 @@ router.get('/', requireAuth, (_req, res) => {
     actual_burns = fuelLogs.corridorSummary();
   } catch (_) { /* non-fatal */ }
 
-  res.json({ ...base, actual_burns });
+  // Phase 149 — burn efficiency ranking: worst-first sorted per-hauler
+  // view with deviation vs the corridor average. Gives ops a fast read
+  // on which haulers are burning more fuel per tonne than the corridor
+  // mean — a direct coaching and maintenance signal.
+  const corridorAvg = base.fleet_burn.corridor_avg_fuel_usd_per_tonne;
+  const burn_ranking = [...base.fleet_burn.per_hauler]
+    .map((h) => ({
+      hauler_id:          h.hauler_id,
+      display_name:       h.display_name,
+      fuel_usd_per_tonne: h.fuel_usd_per_tonne,
+      trip_count:         h.trip_count,
+      vs_avg_usd: Number((h.fuel_usd_per_tonne - corridorAvg).toFixed(2)),
+      vs_avg_pct: corridorAvg > 0
+        ? Number(((h.fuel_usd_per_tonne - corridorAvg) / corridorAvg * 100).toFixed(1))
+        : 0,
+    }))
+    .sort((a, b) => b.fuel_usd_per_tonne - a.fuel_usd_per_tonne);
+
+  res.json({ ...base, actual_burns, burn_ranking });
 });
 
 module.exports = router;

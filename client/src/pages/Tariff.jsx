@@ -12,8 +12,9 @@ import PageShell from '../components/layout/PageShell';
 import EffectiveRateHero from '../components/tariff/EffectiveRateHero';
 import IndexationPanel   from '../components/tariff/IndexationPanel';
 import TrendCard         from '../components/tariff/TrendCard';
-import EffectiveRateHistoryCard from '../components/tariff/EffectiveRateHistoryCard';
-import IntelligencePanel from '../components/intelligence/IntelligencePanel';
+import EffectiveRateHistoryCard  from '../components/tariff/EffectiveRateHistoryCard';
+import IndexationBreakdownChart  from '../components/tariff/IndexationBreakdownChart';
+import IntelligencePanel         from '../components/intelligence/IntelligencePanel';
 
 export default function Tariff() {
   const [data, setData]   = useState(null);
@@ -60,6 +61,11 @@ export default function Tariff() {
           current={data?.effective_rate_usd_per_tonne}
         />
         <IndexationPanel   data={data} />
+
+        {/* Phase 152 — per-component tariff breakdown chart */}
+        {data?.component_history && (
+          <IndexationBreakdownChart componentHistory={data.component_history} />
+        )}
 
         <div style={{
           display: 'grid',
