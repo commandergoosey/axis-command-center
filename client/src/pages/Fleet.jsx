@@ -13,6 +13,7 @@ import PageShell from '../components/layout/PageShell';
 import Button from '../components/primitives/Button';
 import StatusBadge from '../components/primitives/StatusBadge';
 import RigDetail from '../components/fleet/RigDetail';
+import FleetAvailabilityStrip from '../components/fleet/FleetAvailabilityStrip';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
 import { formatKm } from '../lib/format';
 
@@ -137,6 +138,13 @@ export default function Fleet() {
           showHauler={!isHaulerAdmin}
           onRowClick={setSelectedRig}
         />
+      )}
+
+      {/* Phase 157 — per-hauler fleet availability breakdown */}
+      {roster.data && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <FleetAvailabilityStrip availabilityByHauler={roster.data.availability_by_hauler} />
+        </div>
       )}
 
       <div style={{ marginTop: 'var(--space-4)' }}>

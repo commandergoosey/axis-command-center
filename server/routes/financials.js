@@ -61,6 +61,18 @@ router.get('/', (_req, res) => {
       };
     });
 
+  // Phase 156 — monthly P&L trend (Nov 2025 – current MTD).
+  // Jan–Mar figures reconcile to PNL_YTD totals; Apr MTD is live from PNL_MTD.
+  // Marked MODELLED per §12.4 for all months except the current MTD entry.
+  const pnl_trend = [
+    { month: '2025-11', revenue_usd:   820_000, operating_costs_usd:  720_000, ebitda_usd:  100_000, partial: false, modelled: true },
+    { month: '2025-12', revenue_usd: 1_340_000, operating_costs_usd:  950_000, ebitda_usd:  390_000, partial: false, modelled: true },
+    { month: '2026-01', revenue_usd: 1_750_000, operating_costs_usd: 1_110_000, ebitda_usd:  640_000, partial: false, modelled: true },
+    { month: '2026-02', revenue_usd: 1_810_000, operating_costs_usd: 1_148_000, ebitda_usd:  662_000, partial: false, modelled: true },
+    { month: '2026-03', revenue_usd: 1_837_000, operating_costs_usd: 1_162_000, ebitda_usd:  675_000, partial: false, modelled: true },
+    { month: '2026-04', revenue_usd: PNL_MTD.revenue_usd, operating_costs_usd: PNL_MTD.operating_costs_usd, ebitda_usd: PNL_MTD.ebitda_usd, partial: true, modelled: false },
+  ];
+
   res.json({
     generated_at: new Date().toISOString(),
     dscr,
@@ -87,6 +99,7 @@ router.get('/', (_req, res) => {
       followup_counts: receivableFollowups.countsByBand(),
     },
     cashflow: CASHFLOW_FORECAST,
+    pnl_trend,
     by_hauler: byHauler,   // Phase 129
   });
 });

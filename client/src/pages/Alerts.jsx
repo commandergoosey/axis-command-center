@@ -17,6 +17,7 @@ import PageShell           from '../components/layout/PageShell';
 import AlertsSummary       from '../components/alerts/AlertsSummary';
 import AlertCard           from '../components/alerts/AlertCard';
 import AutoClearedSection  from '../components/alerts/AutoClearedSection';
+import AlertSeverityTrend  from '../components/alerts/AlertSeverityTrend';
 import IntelligencePanel   from '../components/intelligence/IntelligencePanel';
 
 const SEVERITY_OPTIONS = [
@@ -197,6 +198,8 @@ export default function Alerts() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <AlertsSummary summary={data?.summary} />
+        {/* Phase 155 — 8-week severity trend */}
+        <AlertSeverityTrend severityTrend={data?.severity_trend} />
         <IntelligencePanel page="alerts" />
 
         <FilterBar

@@ -49,10 +49,39 @@ function withOverrides(trucks) {
 
 router.get('/', (req, res) => {
   const rows = withOverrides(scopedFleet(req));
+
+  // Phase 157 — per-hauler fleet availability breakdown.
+  // Groups each truck by hauler and counts active/garage/idle/flagged
+  // so the Fleet page can show utilisation at a glance without the
+  // operator having to count rows in the table.
+  const byHauler = {};
+  rows.forEach((t) => {
+    if (!byHauler[t.hauler_id]) {
+      byHauler[t.hauler_id] = {
+        hauler_id:    t.hauler_id,
+        display_name: t.hauler_display ?? t.hauler_id,
+        total:   0,
+        active:  0,
+        garage:  0,
+        idle:    0,
+        flagged: 0,
+      };
+    }
+    const b = byHauler[t.hauler_id];
+    b.total++;
+    if (t.status === 'active' || t.status === 'in_transit') b.active++;
+    else if (t.status === 'garage') b.garage++;
+    else b.idle++;
+    if (t.maintenance_flag) b.flagged++;
+  });
+  const availability_by_hauler = Object.values(byHauler)
+    .sort((a, b) => b.total - a.total);
+
   res.json({
     generated_at: new Date().toISOString(),
     total:  rows.length,
     trucks: rows,
+    availability_by_hauler,
   });
 });
 

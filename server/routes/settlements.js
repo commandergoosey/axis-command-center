@@ -121,12 +121,35 @@ router.get('/', requireAuth, (req, res) => {
   const hauler_aging = Object.values(agingMap)
     .sort((a, b) => b.oldest_days_outstanding - a.oldest_days_outstanding);
 
+  // Phase 158 — payment velocity: per-period invoiced vs paid totals.
+  // Shows which months are clearing quickly vs accumulating arrears.
+  // Uses the full unfiltered rows (all haulers) for a corridor-level view.
+  const allRows = [...SETTLEMENTS.map(settlementOverlay.apply),
+                   ...settlementOverlay.listGenerated().map((g) => {
+                     const ov = settlementOverlay.getOverride(g.id);
+                     return ov?.status ? { ...g, status: ov.status } : g;
+                   })];
+  const invoicedByPeriod = {};
+  const paidByPeriod = {};
+  allRows.forEach((r) => {
+    const p = r.period;
+    invoicedByPeriod[p] = (invoicedByPeriod[p] ?? 0) + (r.net_usd ?? 0);
+    if (r.status === 'paid') paidByPeriod[p] = (paidByPeriod[p] ?? 0) + (r.net_usd ?? 0);
+  });
+  const payment_velocity = Object.keys(invoicedByPeriod).sort().map((period) => ({
+    period,
+    invoiced_usd:    Math.round(invoicedByPeriod[period]),
+    paid_usd:        Math.round(paidByPeriod[period] ?? 0),
+    outstanding_usd: Math.round(invoicedByPeriod[period] - (paidByPeriod[period] ?? 0)),
+  }));
+
   res.json({
     generated_at: new Date().toISOString(),
     statements: rows,
     counts,
     periods: PERIODS,
     hauler_aging,
+    payment_velocity,
   });
 });
 

@@ -26,6 +26,7 @@ import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2 } from 'lu
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
+import HaulerThroughputChart from '../components/analytics/HaulerThroughputChart';
 
 /* ── Token colours (CSS vars resolved at runtime) ─────────────────── */
 const C_RUST   = 'var(--bauxite-rust)';
@@ -415,6 +416,9 @@ export default function Analytics() {
             <HaulerAttainmentChart rows={haulerAttainment} />
           </Panel>
         )}
+
+        {/* ── Phase 154: Per-hauler stacked throughput ──────────── */}
+        <HaulerThroughputChart weeks={weeks} haulerTotals={haulerTotals} />
 
       </div>
     </PageShell>

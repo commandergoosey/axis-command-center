@@ -11,6 +11,7 @@ import { FileText } from 'lucide-react';
 import PageShell           from '../components/layout/PageShell';
 import DSCRHero            from '../components/financials/DSCRHero';
 import PnLSnapshot         from '../components/financials/PnLSnapshot';
+import PLTrendChart        from '../components/financials/PLTrendChart';
 import CovenantTable       from '../components/financials/CovenantTable';
 import CashflowForecast    from '../components/financials/CashflowForecast';
 import ReceivablesPanel    from '../components/financials/ReceivablesPanel';
@@ -90,6 +91,8 @@ export default function Financials() {
         </div>
         <ReceivablesPanel receivables={data?.receivables} onMutate={load} />
         <HaulerRevenueStrip haulers={data?.by_hauler} />
+        {/* Phase 156 — monthly P&L trend */}
+        <PLTrendChart pnlTrend={data?.pnl_trend} />
         <CashflowForecast weeks={data?.cashflow} />
         <IntelligencePanel page="financials" />
       </div>
