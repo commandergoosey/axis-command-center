@@ -437,7 +437,7 @@ function ThroughputStrip({ throughput, onTargetSet }) {
 
   if (!throughput) return null;
 
-  const { actual_tonnes, convoy_count, target_tonnes, pct, set_by } = throughput;
+  const { actual_tonnes, convoy_count, target_tonnes, pct, set_by, by_hauler = [] } = throughput;
 
   // Progress bar / percentage colour
   const barColor =
