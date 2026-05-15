@@ -1,0 +1,109 @@
+/*
+ * AXIS — design tokens
+ * Resolved from ../Bauxite Project/DESIGN_SYSTEM.md (§4 Colour, §5 Typography, §6 Grid).
+ * Never hardcode colour, font, or spacing values in components. Always reference a token.
+ */
+
+:root {
+  /* ── Primary palette ───────────────────────────────────────── */
+  --bauxite-rust: #A23E23;
+  --charcoal:     #1F1F1F;
+  --bone:         #F5F1EC;
+
+  /* ── Neutrals ──────────────────────────────────────────────── */
+  --iron:         #4A4A4A;
+  --slate:        #8A8A8A;
+  --ash:          #E8E4DE;
+  --white:        #FFFFFF;
+  --black:        #000000;
+
+  /* ── Functional / signal ───────────────────────────────────── */
+  --signal-green: #2E6B3F;
+  --signal-amber: #B8860B;
+  --signal-red:   #8B2E1A;
+  --signal-navy:  #2C4A6B;
+
+  /* ── Semantic surfaces ─────────────────────────────────────── */
+  --surface:       var(--bone);
+  --surface-raised: var(--white);
+  --surface-sunk:  var(--ash);
+
+  /* ── Semantic text ─────────────────────────────────────────── */
+  --text:          var(--charcoal);     /* body, headings */
+  --text-secondary: var(--iron);        /* captions, supporting copy */
+  --text-tertiary: var(--slate);        /* 14px+ metadata only, never body */
+  --text-inverse:  var(--bone);
+
+  /* ── Borders ───────────────────────────────────────────────── */
+  --border-hairline: rgba(31, 31, 31, 0.08);
+  --border-soft:     rgba(31, 31, 31, 0.14);
+  --border-strong:   rgba(31, 31, 31, 0.24);
+
+  /* Bauxite Rust accent borders (used sparingly — 7–9% area rule) */
+  --accent-border-soft: rgba(162, 62, 35, 0.22);
+  --accent-tint:        rgba(162, 62, 35, 0.06);
+
+  /* ── Typography ────────────────────────────────────────────── */
+  --font-primary: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+
+  /* Weights — only 400 / 500 / 900 ship (per design system §5) */
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-black:   900;
+
+  /* Type scale — resolved to px/line-height/weight/tracking */
+  --ts-display-size: 64px;  --ts-display-lh: 1.1; --ts-display-tracking: -0.02em;
+  --ts-h1-size:      40px;  --ts-h1-lh:      1.2; --ts-h1-tracking:      -0.01em;
+  --ts-h2-size:      28px;  --ts-h2-lh:      1.3;
+  --ts-h3-size:      20px;  --ts-h3-lh:      1.4;
+  --ts-body-size:    16px;  --ts-body-lh:    1.65;
+  --ts-body-sm-size: 14px;  --ts-body-sm-lh: 1.6;
+  --ts-caption-size: 12px;  --ts-caption-lh: 1.5;
+  --ts-micro-size:   11px;  --ts-micro-lh:   1.5; --ts-micro-tracking: 0.08em;
+  --ts-eyebrow-size: 12px;  --ts-eyebrow-lh: 1.3; --ts-eyebrow-tracking: 0.12em;
+
+  /* ── Spacing (8pt scale — §6.1) ────────────────────────────── */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+  --space-7: 64px;
+  --space-8: 96px;
+  --space-9: 128px;
+
+  /* ── Radii (§6.4) ──────────────────────────────────────────── */
+  --radius-sm: 4px;     /* default, buttons */
+  --radius-md: 8px;     /* cards, panels */
+  --radius-lg: 12px;    /* modals, hero surfaces */
+
+  /* ── Shell dimensions ──────────────────────────────────────── */
+  --sidebar-w:   64px;
+  --topbar-h:    64px;
+  --content-pad: 32px;
+  --right-rail:  340px;   /* Today page right column */
+
+  /* ── Elevation (used sparingly) ────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(31, 31, 31, 0.04);
+  --shadow-md: 0 2px 8px rgba(31, 31, 31, 0.06);
+}
+
+/* Global reset fragments that must apply everywhere */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-primary);
+  font-size: var(--ts-body-size);
+  line-height: var(--ts-body-lh);
+  font-weight: var(--fw-regular);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }

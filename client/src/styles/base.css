@@ -1,0 +1,121 @@
+/*
+ * AXIS — base element styles and utilities.
+ * Scoped, minimal. Components style themselves via inline style or CSS modules later.
+ */
+
+a {
+  color: var(--bauxite-rust);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+a:focus-visible {
+  outline: 2px solid var(--bauxite-rust);
+  outline-offset: 2px;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+/* Tabular lining figures for data presentation — §5 Numerals. */
+.tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Mono utility — used for data, IDs, timestamps. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Eyebrow — section category label, always Bauxite Rust. */
+.eyebrow {
+  font-size: var(--ts-eyebrow-size);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ts-eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--bauxite-rust);
+}
+
+/* Micro — pill/tag labels. */
+.micro {
+  font-size: var(--ts-micro-size);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ts-micro-tracking);
+  text-transform: uppercase;
+}
+
+/* Scrollbar — thin, neutral, matches infrastructure register. */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* Focus ring default */
+*:focus-visible {
+  outline: 2px solid var(--bauxite-rust);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Motion — subtle only, per design system (no entrance spins). */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Phase 40 — Daily digest print rules.
+ * The TodayDigest page renders outside Shell so there's no sidebar/
+ * topbar to hide, but we still need to: drop the .no-print toolbar,
+ * paint on plain paper (white) without the bone background, honour
+ * section + table-row break-inside hints, and tighten margins for
+ * letter/A4 paper. */
+@media print {
+  body.digest-mode {
+    background: #fff !important;
+  }
+  .no-print { display: none !important; }
+  @page {
+    margin: 14mm 12mm;
+    size: A4;
+  }
+  section, tr, li {
+    page-break-inside: avoid;
+  }
+}
+
+/* ── Leaflet popup — AXIS chrome (Phase 106) ── */
+.axis-popup .leaflet-popup-content-wrapper {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0,0,0,.14);
+  padding: 0;
+}
+.axis-popup .leaflet-popup-content {
+  margin: 10px 12px;
+  color: var(--text);
+}
+.axis-popup .leaflet-popup-tip {
+  background: var(--surface-raised);
+}
+.axis-popup .leaflet-popup-close-button {
+  color: var(--text-tertiary);
+  font-size: 16px;
+  top: 4px;
+  right: 6px;
+}

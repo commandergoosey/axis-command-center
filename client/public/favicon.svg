@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="#A23E23">
+  <title>AXIS</title>
+  <g transform="translate(40 40)">
+    <rect x="-40" y="-8" width="80" height="16" transform="rotate(45)" />
+    <rect x="-40" y="-8" width="80" height="16" transform="rotate(-45)" />
+  </g>
+</svg>
