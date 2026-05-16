@@ -67,12 +67,37 @@ router.get('/', (_req, res) => {
   // percentage of the total contracted corridor fleet.
   const totalContracted = agg.fleet.contracted_trucks || 1; // guard /0
 
+  // Phase 193 — fleet uptime by hauler. Groups FLEET by hauler_id and
+  // counts active + in_transit as "operational" vs idle + garage as
+  // "non-operational". Uptime % is a real-time capacity read per hauler.
+  const fleetByHauler = {};
+  FLEET.forEach((t) => {
+    if (!fleetByHauler[t.hauler_id]) {
+      fleetByHauler[t.hauler_id] = { operational: 0, idle: 0, garage: 0, total: 0 };
+    }
+    const h = fleetByHauler[t.hauler_id];
+    h.total++;
+    if (t.status === 'active' || t.status === 'in_transit') h.operational++;
+    else if (t.status === 'garage') h.garage++;
+    else h.idle++;
+  });
+
   res.json({
-    haulers: agg.haulers.map((h) => ({
-      ...withIntegration(h),
-      live_today: liveStats[h.id] ?? null,
-      share_pct:  Number(((h.fleet?.contracted_trucks ?? 0) / totalContracted * 100).toFixed(1)),
-    })),
+    haulers: agg.haulers.map((h) => {
+      const fu = fleetByHauler[h.id] ?? { operational: 0, idle: 0, garage: 0, total: 0 };
+      return {
+        ...withIntegration(h),
+        live_today:   liveStats[h.id] ?? null,
+        share_pct:    Number(((h.fleet?.contracted_trucks ?? 0) / totalContracted * 100).toFixed(1)),
+        fleet_uptime: {
+          operational:  fu.operational,
+          idle:         fu.idle,
+          garage:       fu.garage,
+          total:        fu.total,
+          uptime_pct:   fu.total > 0 ? Number(((fu.operational / fu.total) * 100).toFixed(1)) : 0,
+        },
+      };
+    }),
     totals: {
       contracted_trucks: agg.fleet.contracted_trucks,
       active_trucks:     agg.fleet.active_trucks,

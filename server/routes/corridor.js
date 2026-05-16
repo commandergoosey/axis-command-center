@@ -100,6 +100,24 @@ router.get('/', (_req, res) => {
     });
   }
 
+  // Phase 191 — segment utilisation. For each segment, laden trucks are
+  // heading south (loaded) and empty trucks are returning north. Utilisation
+  // = laden / (laden + empty) gives a directional capacity read per segment.
+  // Useful for identifying congestion pinch points on the Nyinahin–Takoradi run.
+  const segment_util = SEGMENTS.map((seg) => {
+    const total = (seg.laden ?? 0) + (seg.empty ?? 0);
+    const util_pct = total > 0 ? Number(((seg.laden / total) * 100).toFixed(0)) : 0;
+    return {
+      id:         seg.id,
+      from:       seg.from,
+      to:         seg.to,
+      laden:      seg.laden,
+      empty:      seg.empty,
+      total,
+      util_pct,
+    };
+  });
+
   res.json({
     corridor: {
       name:         'Nyinahin–Takoradi',
@@ -112,6 +130,7 @@ router.get('/', (_req, res) => {
     active_convoys: activeConvoys,
     health_history,
     throughput_forecast,
+    segment_util,
   });
 });
 

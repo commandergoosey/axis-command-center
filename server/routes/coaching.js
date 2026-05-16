@@ -117,6 +117,26 @@ router.get('/pipeline', requireAuth, (req, res) => {
   }
   data.session_trend = session_trend;
 
+  // Phase 192 — coaching backlog by hauler. Groups the pipeline[] by hauler_id
+  // and counts entries per tier so the Coaching page can show which hauler has
+  // the most outstanding intervention work. Sorted by urgent + high desc.
+  const backlogByHauler = {};
+  (data.pipeline ?? []).forEach((r) => {
+    if (!backlogByHauler[r.hauler_id]) {
+      backlogByHauler[r.hauler_id] = {
+        hauler_id:     r.hauler_id,
+        hauler_display: r.hauler_display ?? r.hauler_id,
+        urgent: 0, high: 0, medium: 0, routine: 0, total: 0,
+      };
+    }
+    const h = backlogByHauler[r.hauler_id];
+    h.total++;
+    const tier = r.tier ?? 'routine';
+    if (h[tier] !== undefined) h[tier]++;
+  });
+  data.backlog_by_hauler = Object.values(backlogByHauler)
+    .sort((a, b) => (b.urgent + b.high) - (a.urgent + a.high) || b.total - a.total);
+
   res.json(data);
 });
 

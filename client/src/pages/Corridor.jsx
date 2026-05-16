@@ -14,6 +14,7 @@ import CorridorSchematic from '../components/corridor/CorridorSchematic';
 import CorridorMap from '../components/corridor/CorridorMap';
 import CorridorConditions from '../components/corridor/CorridorConditions';
 import HealthTrendChart      from '../components/corridor/HealthTrendChart';
+import SegmentUtilChart      from '../components/corridor/SegmentUtilChart';
 import ThroughputForecast    from '../components/corridor/ThroughputForecast';
 import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 
@@ -91,6 +92,13 @@ export default function Corridor() {
       <div style={{ marginTop: 'var(--space-4)' }}>
         <HealthTrendChart history={data?.health_history} />
       </div>
+
+      {/* Phase 191 — per-segment laden/empty utilisation */}
+      {data?.segment_util?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <SegmentUtilChart segmentUtil={data.segment_util} />
+        </div>
+      )}
 
       {/* Phase 172 — 4-week corridor throughput forecast */}
       {data?.throughput_forecast?.length > 0 && (

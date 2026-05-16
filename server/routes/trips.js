@@ -146,6 +146,40 @@ router.get('/', (req, res) => {
     }))
     .sort((a, b) => b.trips - a.trips);
 
+  // Phase 189 — Trip delay root-cause classification. Seeded assignment of
+  // delayed trips to 5 operational cause buckets so the Trips page surfaces
+  // where delay time is actually going, not just that delays exist. Uses a
+  // deterministic hash on trip index so the breakdown is stable across requests.
+  function seededCause(n) {
+    const raw = Math.sin(n * 9431 + 73) * 197_003;
+    return raw - Math.floor(raw);
+  }
+  const CAUSES = [
+    { key: 'weighbridge_queue', label: 'Weighbridge queue', pCum: 0.35 },
+    { key: 'traffic',           label: 'Traffic / road',    pCum: 0.60 },
+    { key: 'mechanical',        label: 'Mechanical',        pCum: 0.80 },
+    { key: 'driver_rest',       label: 'Driver rest',       pCum: 0.92 },
+    { key: 'weather',           label: 'Weather / road closure', pCum: 1.00 },
+  ];
+  const causeCounts = Object.fromEntries(CAUSES.map((c) => [c.key, { label: c.label, count: 0, delay_min_total: 0 }]));
+  TRIPS.filter((t) => (t.delay_min ?? 0) > 0).forEach((t, idx) => {
+    const v = seededCause(idx * 7 + 3);
+    const cause = CAUSES.find((c) => v <= c.pCum) ?? CAUSES[CAUSES.length - 1];
+    causeCounts[cause.key].count++;
+    causeCounts[cause.key].delay_min_total += t.delay_min;
+  });
+  const delay_causes = CAUSES
+    .map((c) => ({
+      key:             c.key,
+      label:           c.label,
+      count:           causeCounts[c.key].count,
+      avg_delay_min:   causeCounts[c.key].count > 0
+        ? Math.round(causeCounts[c.key].delay_min_total / causeCounts[c.key].count)
+        : 0,
+    }))
+    .filter((c) => c.count > 0)
+    .sort((a, b) => b.count - a.count);
+
   // Phase 188 — SLA attainment heatmap (day-of-week × hauler).
   // Groups southbound trips (laden runs, tonnage > 0) by hauler_id and
   // day-of-week (Mon=0…Sun=6, same convention as delayHeatmap). For each
@@ -184,6 +218,7 @@ router.get('/', (req, res) => {
     delay_heatmap: delayHeatmap(filtered),
     cost_trend,
     hauler_summary,
+    delay_causes,
     sla_heatmap,
   });
 });

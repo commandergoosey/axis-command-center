@@ -20,8 +20,9 @@ import StatusBadge from '../components/primitives/StatusBadge';
 import WorkorderDetail         from '../components/maintenance/WorkorderDetail';
 import MaintenanceSchedulePanel from '../components/maintenance/MaintenanceSchedulePanel';
 import IntervalTrackerStrip     from '../components/maintenance/IntervalTrackerStrip';
-import MaintenanceCostTrend     from '../components/maintenance/MaintenanceCostTrend';
-import IntelligencePanel        from '../components/intelligence/IntelligencePanel';
+import MaintenanceCostTrend       from '../components/maintenance/MaintenanceCostTrend';
+import RoadWorthyPipelineChart   from '../components/maintenance/RoadWorthyPipelineChart';
+import IntelligencePanel         from '../components/intelligence/IntelligencePanel';
 import { formatKm, formatUsd } from '../lib/format';
 
 export default function Maintenance() {
@@ -110,6 +111,8 @@ export default function Maintenance() {
           {state.data?.cost_trend && (
             <MaintenanceCostTrend costTrend={state.data.cost_trend} />
           )}
+          {/* Phase 190 — road-worthy cert expiry pipeline */}
+          <RoadWorthyPipelineChart roadWorthyPipeline={state.data?.road_worthy_pipeline} />
           <IntelligencePanel page="maintenance" />
         </div>
       )}

@@ -111,6 +111,45 @@ router.get('/', (req, res) => {
     });
   }
 
+  // Phase 190 — road-worthy certificate expiry pipeline. Buckets every rig
+  // (not just the ≤30d flag) by days until cert expiry so ops can plan
+  // renewal scheduling beyond the immediate 30-day warning window.
+  const RW_BUCKETS = [
+    { key: 'critical',  label: 'Expired / ≤0d', min: -Infinity, max: 0 },
+    { key: 'urgent',    label: '1–30 d',         min: 1,         max: 30 },
+    { key: 'warning',   label: '31–60 d',        min: 31,        max: 60 },
+    { key: 'watch',     label: '61–90 d',        min: 61,        max: 90 },
+    { key: 'clear',     label: '91+ d',          min: 91,        max: Infinity },
+  ];
+  const rwCounts = Object.fromEntries(RW_BUCKETS.map((b) => [b.key, { count: 0, rigs: [] }]));
+  rows.forEach((t) => {
+    const days = t.road_worthy_expiry_days ?? 999;
+    const bucket = RW_BUCKETS.find((b) => days >= b.min && days <= b.max);
+    if (bucket) {
+      rwCounts[bucket.key].count++;
+      rwCounts[bucket.key].rigs.push({ rig_id: t.id, plate: t.plate, hauler_id: t.hauler_id, hauler_display: t.hauler_display, days });
+    }
+  });
+  // Per-hauler rollup for the bar chart.
+  const rwByHauler = {};
+  rows.forEach((t) => {
+    if (!rwByHauler[t.hauler_id]) {
+      rwByHauler[t.hauler_id] = { hauler_id: t.hauler_id, hauler_display: t.hauler_display, critical: 0, urgent: 0, warning: 0, watch: 0, clear: 0, total: 0 };
+    }
+    const days = t.road_worthy_expiry_days ?? 999;
+    const bucket = RW_BUCKETS.find((b) => days >= b.min && days <= b.max);
+    if (bucket) { rwByHauler[t.hauler_id][bucket.key]++; }
+    rwByHauler[t.hauler_id].total++;
+  });
+  const road_worthy_pipeline = {
+    buckets: RW_BUCKETS.map((b) => ({
+      key:   b.key,
+      label: b.label,
+      count: rwCounts[b.key].count,
+    })),
+    by_hauler: Object.values(rwByHauler).sort((a, b) => b.critical - a.critical || b.urgent - a.urgent),
+  };
+
   res.json({
     generated_at: new Date().toISOString(),
     counters: {
@@ -127,6 +166,7 @@ router.get('/', (req, res) => {
     critical: criticalDecorated,
     recent_completions: recentCompletions(rows),
     cost_trend,
+    road_worthy_pipeline,
   });
 });
 

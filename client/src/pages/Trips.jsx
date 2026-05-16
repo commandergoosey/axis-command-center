@@ -16,8 +16,9 @@ import HaulerFilter from '../components/trips/HaulerFilter';
 import CostPerRouteCard from '../components/trips/CostPerRouteCard';
 import DelayHeatmap from '../components/trips/DelayHeatmap';
 import CostEfficiencyTrend from '../components/trips/CostEfficiencyTrend';
-import HaulerTripSummary   from '../components/trips/HaulerTripSummary';
-import SLAHeatmapChart     from '../components/trips/SLAHeatmapChart';
+import HaulerTripSummary      from '../components/trips/HaulerTripSummary';
+import DelayRootCauseChart    from '../components/trips/DelayRootCauseChart';
+import SLAHeatmapChart        from '../components/trips/SLAHeatmapChart';
 import TripsTable from '../components/trips/TripsTable';
 import TripDetail from '../components/trips/TripDetail';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
@@ -138,6 +139,13 @@ export default function Trips() {
         anyFilter={anyFilter}
         onClear={() => { setDirection(''); setStatus(''); }}
       />
+
+      {/* Phase 189 — delay root-cause breakdown */}
+      {data?.delay_causes?.length > 0 && (
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <DelayRootCauseChart delayCauses={data.delay_causes} />
+        </div>
+      )}
 
       {/* Phase 141 — cost efficiency trend above the ledger */}
       <div style={{ marginBottom: 'var(--space-4)' }}>

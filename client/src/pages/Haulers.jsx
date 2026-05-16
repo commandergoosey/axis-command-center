@@ -7,6 +7,7 @@ import HaulerTable          from '../components/hauler/HaulerTable';
 import HaulerDetail          from '../components/hauler/HaulerDetail';
 import HaulerCompare         from '../components/hauler/HaulerCompare';
 import HaulerFleetShareChart from '../components/hauler/HaulerFleetShareChart';
+import FleetUptimeChart      from '../components/hauler/FleetUptimeChart';
 import OnboardHaulerModal    from '../components/hauler/OnboardHaulerModal';
 import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 import Button from '../components/primitives/Button';
@@ -85,6 +86,13 @@ export default function Haulers() {
       {haulers.length > 0 && (
         <div style={{ marginBottom: 'var(--space-4)' }}>
           <HaulerFleetShareChart haulers={haulers} />
+        </div>
+      )}
+
+      {/* Phase 193 — fleet operational uptime by hauler */}
+      {haulers.length > 0 && (
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <FleetUptimeChart haulers={haulers} />
         </div>
       )}
 

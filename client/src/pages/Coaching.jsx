@@ -21,6 +21,7 @@ import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import CoachingEffectivenessCard from '../components/coaching/CoachingEffectivenessCard';
 import CoachingSessionTrend     from '../components/coaching/CoachingSessionTrend';
+import CoachingBacklogChart     from '../components/coaching/CoachingBacklogChart';
 
 const TIER_TONE = {
   urgent:  'var(--bauxite-rust)',
@@ -98,6 +99,9 @@ export default function Coaching() {
         {data?.session_trend && (
           <CoachingSessionTrend sessionTrend={data.session_trend} />
         )}
+
+        {/* Phase 192 — coaching backlog by hauler */}
+        <CoachingBacklogChart backlogByHauler={data?.backlog_by_hauler} />
       </div>
 
       {composeFor && (
