@@ -17,8 +17,9 @@ import StatusBadge from '../components/primitives/StatusBadge';
 import DriverDetail             from '../components/drivers/DriverDetail';
 import DriverHoursDistribution  from '../components/drivers/DriverHoursDistribution';
 import LicenceExpiryPipeline    from '../components/drivers/LicenceExpiryPipeline';
-import DriverSafetyHistogram    from '../components/drivers/DriverSafetyHistogram';
-import IntelligencePanel        from '../components/intelligence/IntelligencePanel';
+import DriverSafetyHistogram      from '../components/drivers/DriverSafetyHistogram';
+import RestStatusByHaulerChart    from '../components/drivers/RestStatusByHaulerChart';
+import IntelligencePanel          from '../components/intelligence/IntelligencePanel';
 
 const REST_LABEL = {
   compliant: 'Compliant',
@@ -168,6 +169,13 @@ export default function Drivers() {
       {roster.data?.safety_distribution?.length > 0 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <DriverSafetyHistogram safetyDistribution={roster.data.safety_distribution} />
+        </div>
+      )}
+
+      {/* Phase 211 — rest status breakdown by hauler */}
+      {roster.data?.rest_by_hauler?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <RestStatusByHaulerChart restByHauler={roster.data.rest_by_hauler} />
         </div>
       )}
 

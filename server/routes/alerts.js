@@ -185,6 +185,36 @@ router.get('/', (req, res) => {
     : 0;
   const alert_age_profile = { buckets: ageBuckets, oldest_open_days: oldestDays };
 
+  // Phase 212 — mean time to resolve by alert type (MODELLED).
+  // Seeded values reflect realistic domain knowledge: integration failures
+  // are quick (ops re-push), convoy delays clear in hours, licence issues
+  // take days to process through DVLA. Stable per type — not per session.
+  function seededResolve(n) {
+    const raw = Math.sin(n * 6089 + 61) * 103_007;
+    return raw - Math.floor(raw);
+  }
+  const ALERT_TYPE_BASE_DAYS = {
+    convoy_delay:        0.6,
+    integration_failure: 0.8,
+    axle_load_breach:    1.4,
+    payload_variance:    1.2,
+    hse_event:           2.1,
+    sla_breach:          3.0,
+    maintenance_cluster: 4.5,
+    payment_ageing:      5.6,
+    filing_overdue:      6.0,
+    licence_expiry:      7.2,
+    weighbridge_hold:    0.9,
+  };
+  const resolution_by_type = Object.entries(ALERT_TYPE_BASE_DAYS)
+    .map(([type, baseDays], i) => ({
+      type,
+      label:    type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      avg_days: Number((baseDays * (0.75 + seededResolve(i * 13 + 7) * 0.50)).toFixed(1)),
+      modelled: true,
+    }))
+    .sort((a, b) => b.avg_days - a.avg_days);
+
   res.json({
     generated_at: new Date().toISOString(),
     summary: {
@@ -201,6 +231,7 @@ router.get('/', (req, res) => {
     },
     severity_trend,
     alert_age_profile,
+    resolution_by_type,
     alerts: rows,
     auto_cleared: autoCleared,
   });

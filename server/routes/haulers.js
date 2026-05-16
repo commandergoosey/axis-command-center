@@ -82,6 +82,38 @@ router.get('/', (_req, res) => {
     else h.idle++;
   });
 
+  // Phase 209 — per-hauler trip cadence: avg trips per week, trailing 8 weeks.
+  // TRIPS is already required at the top of this module. Counts all trip
+  // directions so the cadence reflects total corridor activity per hauler.
+  const TRIP_WINDOW_MS   = 8 * 7 * 86_400_000;
+  const tripWindowStart  = Date.now() - TRIP_WINDOW_MS;
+  const tripWeeksByHauler = {};
+  TRIPS.forEach((t) => {
+    if (!t.departed_at) return;
+    const ts = new Date(t.departed_at).getTime();
+    if (ts < tripWindowStart) return;
+    if (!tripWeeksByHauler[t.hauler_id]) {
+      tripWeeksByHauler[t.hauler_id] = { trips: 0, weeks: new Set() };
+    }
+    const d   = new Date(ts);
+    const mon = new Date(d);
+    mon.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+    mon.setUTCHours(0, 0, 0, 0);
+    tripWeeksByHauler[t.hauler_id].trips++;
+    tripWeeksByHauler[t.hauler_id].weeks.add(mon.toISOString().slice(0, 10));
+  });
+  const trip_cadence = agg.haulers.map((h) => {
+    const tc    = tripWeeksByHauler[h.id];
+    const weeks = tc?.weeks.size ?? 0;
+    return {
+      hauler_id:          h.id,
+      display_name:       h.display_name,
+      trips_8w:           tc?.trips ?? 0,
+      weeks_active:       weeks,
+      avg_trips_per_week: weeks > 0 ? Number((tc.trips / weeks).toFixed(1)) : 0,
+    };
+  }).sort((a, b) => b.avg_trips_per_week - a.avg_trips_per_week);
+
   res.json({
     haulers: agg.haulers.map((h) => {
       const fu = fleetByHauler[h.id] ?? { operational: 0, idle: 0, garage: 0, total: 0 };
@@ -103,6 +135,7 @@ router.get('/', (_req, res) => {
       active_trucks:     agg.fleet.active_trucks,
       live_haulers:      agg.haulers.filter((h) => integrationStore.summary(h.id).live).length,
     },
+    trip_cadence,
   });
 });
 

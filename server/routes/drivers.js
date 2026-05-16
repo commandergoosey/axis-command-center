@@ -114,12 +114,35 @@ router.get('/', (req, res) => {
     tone:  b.min < 75 ? 'critical' : b.min < 85 ? 'warning' : 'ok',
   }));
 
+  // Phase 211 — rest status breakdown by hauler.
+  // Shows compliant/warning/breach counts per hauler so ops can spot
+  // which haulers have the worst rest-compliance posture this week.
+  const restByHaulerMap = {};
+  rows.forEach((d) => {
+    if (!restByHaulerMap[d.hauler_id]) {
+      restByHaulerMap[d.hauler_id] = {
+        hauler_id:      d.hauler_id,
+        hauler_display: d.hauler_display ?? d.hauler_id,
+        compliant: 0, warning: 0, breach: 0, total: 0,
+      };
+    }
+    const h  = restByHaulerMap[d.hauler_id];
+    const rs = d.rest_status ?? 'compliant';
+    h.total++;
+    if (rs === 'breach') h.breach++;
+    else if (rs === 'warning') h.warning++;
+    else h.compliant++;
+  });
+  const rest_by_hauler = Object.values(restByHaulerMap)
+    .sort((a, b) => b.breach - a.breach || b.warning - a.warning);
+
   res.json({
     generated_at: new Date().toISOString(),
     total: rows.length,
     drivers: rows,
     licence_pipeline,
     safety_distribution,
+    rest_by_hauler,
   });
 });
 

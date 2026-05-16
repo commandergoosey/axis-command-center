@@ -195,7 +195,35 @@ router.get('/', (req, res) => {
         modelled:        true,
       }));
 
-    res.json({ ...base, today_live, hauler_attainment, weekday_pattern, efficiency_benchmark, take_or_pay_risk, revenue_per_km });
+    // Phase 210 — avg payload per southbound trip, 12-week trend.
+    // Groups southbound trips by Monday week and computes mean tonnage_t.
+    // Reference: rated payload capacity ≈ 40 t per trip. Real fleet telemetry.
+    const RATED_PAYLOAD_T = 40;
+    const payloadByWeek = {};
+    TRIPS
+      .filter((t) => t.direction === 'southbound' && (t.tonnage_t ?? 0) > 0)
+      .forEach((t) => {
+        const d   = new Date(t.departed_at ?? t.completed_at ?? 0);
+        const mon = new Date(d);
+        mon.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+        mon.setUTCHours(0, 0, 0, 0);
+        const key = mon.toISOString().slice(0, 10);
+        if (!payloadByWeek[key]) payloadByWeek[key] = { sum: 0, count: 0 };
+        payloadByWeek[key].sum   += t.tonnage_t;
+        payloadByWeek[key].count += 1;
+      });
+    const avg_payload_trend = Object.entries(payloadByWeek)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([week_of, { sum, count }]) => ({
+        week_of,
+        avg_payload_t:   Number((sum / count).toFixed(1)),
+        trip_count:      count,
+        utilisation_pct: Number(((sum / count) / RATED_PAYLOAD_T * 100).toFixed(1)),
+        rated_payload_t: RATED_PAYLOAD_T,
+      }));
+
+    res.json({ ...base, today_live, hauler_attainment, weekday_pattern, efficiency_benchmark, take_or_pay_risk, revenue_per_km, avg_payload_trend });
   } catch (err) {
     console.error('[analytics]', err);
     res.status(500).json({ error: 'Analytics composition failed' });

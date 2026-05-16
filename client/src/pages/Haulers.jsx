@@ -6,8 +6,9 @@ import PageShell from '../components/layout/PageShell';
 import HaulerTable          from '../components/hauler/HaulerTable';
 import HaulerDetail          from '../components/hauler/HaulerDetail';
 import HaulerCompare         from '../components/hauler/HaulerCompare';
-import HaulerFleetShareChart from '../components/hauler/HaulerFleetShareChart';
-import FleetUptimeChart      from '../components/hauler/FleetUptimeChart';
+import HaulerFleetShareChart   from '../components/hauler/HaulerFleetShareChart';
+import FleetUptimeChart        from '../components/hauler/FleetUptimeChart';
+import HaulerTripCadenceChart  from '../components/hauler/HaulerTripCadenceChart';
 import OnboardHaulerModal    from '../components/hauler/OnboardHaulerModal';
 import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 import Button from '../components/primitives/Button';
@@ -93,6 +94,13 @@ export default function Haulers() {
       {haulers.length > 0 && (
         <div style={{ marginBottom: 'var(--space-4)' }}>
           <FleetUptimeChart haulers={haulers} />
+        </div>
+      )}
+
+      {/* Phase 209 — per-hauler trip cadence: avg trips/wk trailing 8 weeks */}
+      {state.data?.trip_cadence?.length > 0 && (
+        <div style={{ marginBottom: 'var(--space-4)' }}>
+          <HaulerTripCadenceChart tripCadence={state.data.trip_cadence} />
         </div>
       )}
 

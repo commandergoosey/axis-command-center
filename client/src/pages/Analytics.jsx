@@ -31,6 +31,7 @@ import WeekdayPatternChart     from '../components/analytics/WeekdayPatternChart
 import FuelEfficiencyBenchmark from '../components/analytics/FuelEfficiencyBenchmark';
 import TakeOrPayChart          from '../components/analytics/TakeOrPayChart';
 import RevenuePerKmChart       from '../components/analytics/RevenuePerKmChart';
+import AvgPayloadTrendChart    from '../components/analytics/AvgPayloadTrendChart';
 import IntelligencePanel       from '../components/intelligence/IntelligencePanel';
 
 /* ── Token colours (CSS vars resolved at runtime) ─────────────────── */
@@ -441,6 +442,11 @@ export default function Analytics() {
         {/* ── Phase 198: Revenue per corridor-km trend ──────────── */}
         {data?.revenue_per_km?.length > 0 && (
           <RevenuePerKmChart revenuePerKm={data.revenue_per_km} />
+        )}
+
+        {/* ── Phase 210: Avg payload per southbound trip, 12-week trend ─ */}
+        {data?.avg_payload_trend?.length > 0 && (
+          <AvgPayloadTrendChart avgPayloadTrend={data.avg_payload_trend} />
         )}
 
         <IntelligencePanel page="analytics" />

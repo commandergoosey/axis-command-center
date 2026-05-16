@@ -18,8 +18,9 @@ import AlertsSummary       from '../components/alerts/AlertsSummary';
 import AlertCard           from '../components/alerts/AlertCard';
 import AutoClearedSection  from '../components/alerts/AutoClearedSection';
 import AlertSeverityTrend  from '../components/alerts/AlertSeverityTrend';
-import AlertAgeProfileChart from '../components/alerts/AlertAgeProfileChart';
-import IntelligencePanel   from '../components/intelligence/IntelligencePanel';
+import AlertAgeProfileChart   from '../components/alerts/AlertAgeProfileChart';
+import AlertResolutionChart  from '../components/alerts/AlertResolutionChart';
+import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 
 const SEVERITY_OPTIONS = [
   ['', 'All severities'],
@@ -204,6 +205,10 @@ export default function Alerts() {
         {/* Phase 197 — open alert age profile */}
         {data?.alert_age_profile && (
           <AlertAgeProfileChart alertAgeProfile={data.alert_age_profile} />
+        )}
+        {/* Phase 212 — mean time to resolve by alert type */}
+        {data?.resolution_by_type?.length > 0 && (
+          <AlertResolutionChart resolutionByType={data.resolution_by_type} />
         )}
         <IntelligencePanel page="alerts" />
 
