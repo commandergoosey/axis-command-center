@@ -19,9 +19,10 @@ import Button from '../components/primitives/Button';
 import Modal from '../components/primitives/Modal';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
-import CoachingEffectivenessCard from '../components/coaching/CoachingEffectivenessCard';
-import CoachingSessionTrend     from '../components/coaching/CoachingSessionTrend';
-import CoachingBacklogChart     from '../components/coaching/CoachingBacklogChart';
+import CoachingEffectivenessCard  from '../components/coaching/CoachingEffectivenessCard';
+import CoachingSessionTrend      from '../components/coaching/CoachingSessionTrend';
+import CoachingBacklogChart      from '../components/coaching/CoachingBacklogChart';
+import CoachingCompletionChart   from '../components/coaching/CoachingCompletionChart';
 
 const TIER_TONE = {
   urgent:  'var(--bauxite-rust)',
@@ -102,6 +103,11 @@ export default function Coaching() {
 
         {/* Phase 192 — coaching backlog by hauler */}
         <CoachingBacklogChart backlogByHauler={data?.backlog_by_hauler} />
+
+        {/* Phase 206 — coaching session completion rate trend */}
+        {data?.session_trend && (
+          <CoachingCompletionChart sessionTrend={data.session_trend} />
+        )}
       </div>
 
       {composeFor && (

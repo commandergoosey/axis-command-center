@@ -26,6 +26,7 @@ import BurnEfficiencyStrip      from '../components/diesel/BurnEfficiencyStrip';
 import HaulerBurnVarianceChart  from '../components/diesel/HaulerBurnVarianceChart';
 import TariffSensitivityChart   from '../components/diesel/TariffSensitivityChart';
 import DieselPriceTrend         from '../components/diesel/DieselPriceTrend';
+import FleetEfficiencyChart     from '../components/diesel/FleetEfficiencyChart';
 
 export default function Diesel() {
   const [data, setData]   = useState(null);
@@ -88,6 +89,11 @@ export default function Diesel() {
 
           {/* Phase 159 — 12-week diesel price & burn-cost trend */}
           <DieselPriceTrend priceHistory={data.price_history} />
+
+          {/* Phase 207 — per-hauler L/100km fleet efficiency */}
+          {data.fleet_efficiency && (
+            <FleetEfficiencyChart fleetEfficiency={data.fleet_efficiency} />
+          )}
 
           {/* Phase 115 — actual fill events from Phase 111 fuel logs */}
           <ActualBurnsPanel burns={data.actual_burns} />

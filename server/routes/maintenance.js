@@ -150,6 +150,48 @@ router.get('/', (req, res) => {
     by_hauler: Object.values(rwByHauler).sort((a, b) => b.critical - a.critical || b.urgent - a.urgent),
   };
 
+  // Phase 204 — maintenance cost breakdown by vehicle age bracket (MODELLED).
+  // Costs are seeded per rig index so the breakdown is stable but varies realistically
+  // across age cohorts. Older trucks carry a higher ageFactor (rising labour + parts).
+  function seededCostAge(n) {
+    const raw = Math.sin(n * 4931 + 37) * 83_017;
+    return raw - Math.floor(raw);
+  }
+  const currentYear = new Date().getUTCFullYear();
+  const AGE_BRACKETS = [
+    { key: '0-3y', label: '0–3 yrs', min_age: 0,  max_age: 3          },
+    { key: '4-6y', label: '4–6 yrs', min_age: 4,  max_age: 6          },
+    { key: '7-9y', label: '7–9 yrs', min_age: 7,  max_age: 9          },
+    { key: '10+y', label: '10+ yrs', min_age: 10, max_age: Infinity   },
+  ];
+  const ageMap = Object.fromEntries(
+    AGE_BRACKETS.map((b) => [b.key, { ...b, count: 0, workshop_usd: 0, parts_usd: 0 }]),
+  );
+  rows.forEach((t, i) => {
+    const age     = currentYear - (t.year_of_manufacture ?? currentYear - 5);
+    const bracket = AGE_BRACKETS.find((b) => age >= b.min_age && age <= b.max_age);
+    if (!bracket) return;
+    const entry     = ageMap[bracket.key];
+    entry.count++;
+    const ageFactor = 0.8 + (Math.min(age, 12) / 12) * 0.5; // 0–3y ≈ 0.8×, 10+y ≈ 1.3×
+    entry.workshop_usd += Math.round((1_800 + seededCostAge(i * 7 + age) * 2_200) * ageFactor);
+    entry.parts_usd    += Math.round((600   + seededCostAge(i * 3 + age + 50) * 1_200) * ageFactor);
+  });
+  const cost_by_age = AGE_BRACKETS.map((b) => {
+    const d         = ageMap[b.key];
+    const total_usd = d.workshop_usd + d.parts_usd;
+    return {
+      key:             b.key,
+      label:           b.label,
+      count:           d.count,
+      workshop_usd:    d.workshop_usd,
+      parts_usd:       d.parts_usd,
+      total_usd,
+      avg_per_rig_usd: d.count > 0 ? Math.round(total_usd / d.count) : 0,
+      modelled:        true,
+    };
+  }).filter((b) => b.count > 0);
+
   res.json({
     generated_at: new Date().toISOString(),
     counters: {
@@ -167,6 +209,7 @@ router.get('/', (req, res) => {
     recent_completions: recentCompletions(rows),
     cost_trend,
     road_worthy_pipeline,
+    cost_by_age,
   });
 });
 

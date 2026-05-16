@@ -27,6 +27,7 @@ import PinButton from '../components/primitives/PinButton';
 import RiskMatrix          from '../components/risks/RiskMatrix';
 import RiskExposureTrend   from '../components/risks/RiskExposureTrend';
 import RiskCategoryChart   from '../components/risks/RiskCategoryChart';
+import RiskVelocityChart   from '../components/risks/RiskVelocityChart';
 
 const SEVERITY_TONE = {
   critical: 'var(--bauxite-rust)',
@@ -138,6 +139,11 @@ export default function Risks() {
 
         {/* Phase 187 — risk category weighted exposure breakdown */}
         <RiskCategoryChart categoryBreakdown={data?.category_breakdown} />
+
+        {/* Phase 205 — risk velocity: opened vs closed per week */}
+        {data?.velocity_trend && (
+          <RiskVelocityChart velocityTrend={data.velocity_trend} />
+        )}
 
         <FilterChips filters={filters} setFilters={setFilters} />
 

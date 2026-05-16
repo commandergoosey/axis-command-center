@@ -15,6 +15,7 @@ import HSEPanel           from '../components/compliance/HSEPanel';
 import LicencePipeline          from '../components/compliance/LicencePipeline';
 import DeadlineCountdownStrip    from '../components/compliance/DeadlineCountdownStrip';
 import ComplianceHealthTrend     from '../components/compliance/ComplianceHealthTrend';
+import AxleWeeklyTrendChart      from '../components/compliance/AxleWeeklyTrendChart';
 import FilingsTracker            from '../components/reports/FilingsTracker';
 import FilingDetailDrawer from '../components/reports/FilingDetailDrawer';
 import IntelligencePanel  from '../components/intelligence/IntelligencePanel';
@@ -71,6 +72,10 @@ export default function Compliance() {
         {/* Phase 150 — unified deadline countdown: licences + filings */}
         {/* Phase 167 — compliance health score + 8-week trend */}
         <ComplianceHealthTrend healthScore={data?.health_score} />
+        {/* Phase 208 — 8-week axle event frequency trend */}
+        {data?.axle_weekly_trend && (
+          <AxleWeeklyTrendChart axleWeeklyTrend={data.axle_weekly_trend} />
+        )}
         <DeadlineCountdownStrip deadlines={data?.upcoming_deadlines} />
         <LicencePipeline items={data?.licence_expiry} onRenewed={load} />
         <FilingsTracker

@@ -20,9 +20,10 @@ import StatusBadge from '../components/primitives/StatusBadge';
 import WorkorderDetail         from '../components/maintenance/WorkorderDetail';
 import MaintenanceSchedulePanel from '../components/maintenance/MaintenanceSchedulePanel';
 import IntervalTrackerStrip     from '../components/maintenance/IntervalTrackerStrip';
-import MaintenanceCostTrend       from '../components/maintenance/MaintenanceCostTrend';
-import RoadWorthyPipelineChart   from '../components/maintenance/RoadWorthyPipelineChart';
-import IntelligencePanel         from '../components/intelligence/IntelligencePanel';
+import MaintenanceCostTrend           from '../components/maintenance/MaintenanceCostTrend';
+import RoadWorthyPipelineChart       from '../components/maintenance/RoadWorthyPipelineChart';
+import MaintenanceCostByAgeChart     from '../components/maintenance/MaintenanceCostByAgeChart';
+import IntelligencePanel             from '../components/intelligence/IntelligencePanel';
 import { formatKm, formatUsd } from '../lib/format';
 
 export default function Maintenance() {
@@ -113,6 +114,10 @@ export default function Maintenance() {
           )}
           {/* Phase 190 — road-worthy cert expiry pipeline */}
           <RoadWorthyPipelineChart roadWorthyPipeline={state.data?.road_worthy_pipeline} />
+          {/* Phase 204 — maintenance cost by vehicle age bracket */}
+          {state.data?.cost_by_age?.length > 0 && (
+            <MaintenanceCostByAgeChart costByAge={state.data.cost_by_age} />
+          )}
           <IntelligencePanel page="maintenance" />
         </div>
       )}

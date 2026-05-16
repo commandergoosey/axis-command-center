@@ -353,6 +353,33 @@ router.get('/', (_req, res) => {
     trend:            health_trend,
   };
 
+  // Phase 208 — 8-week axle-event frequency trend. Shows whether holds and
+  // warnings are trending up or down week-on-week. Current week uses live
+  // counts from the merged summary; prior 7 weeks are seeded. MODELLED.
+  function seededAxleWeek(n) {
+    const raw = Math.sin(n * 5003 + 47) * 89_041;
+    return raw - Math.floor(raw);
+  }
+  const axle_weekly_trend = [];
+  for (let w = 7; w >= 0; w--) {
+    const weekMs = now - w * 7 * 86_400_000;
+    const monDay = new Date(weekMs);
+    monDay.setUTCDate(monDay.getUTCDate() - ((monDay.getUTCDay() + 6) % 7));
+    monDay.setUTCHours(0, 0, 0, 0);
+    const weekLabel = monDay.toISOString().slice(0, 10);
+    const wk        = Math.round(weekMs / (7 * 86_400_000));
+    const holds     = w === 0 ? summary.holds    : Math.round(1 + seededAxleWeek(wk) * 5);
+    const warnings  = w === 0 ? summary.warnings : Math.round(seededAxleWeek(wk + 200) * 4);
+    axle_weekly_trend.push({
+      week:       weekLabel,
+      holds,
+      warnings,
+      total:      holds + warnings,
+      is_current: w === 0,
+      modelled:   w > 0,
+    });
+  }
+
   res.json({
     generated_at: new Date().toISOString(),
     axle: {
@@ -369,6 +396,7 @@ router.get('/', (_req, res) => {
     filings: mergedFilings(),
     upcoming_deadlines,
     health_score,
+    axle_weekly_trend,
   });
 });
 

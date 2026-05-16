@@ -108,12 +108,41 @@ router.get('/', requireAuth, (_req, res) => {
     .filter((c) => c.count > 0)
     .sort((a, b) => b.weighted_score - a.weighted_score);
 
+  // Phase 205 — risk velocity trend: risks opened vs closed per week (8 weeks).
+  // Both series are seeded for demo stability — the ratio of opened to closed
+  // drives the net line, which ops can use to judge whether the register is
+  // growing (net > 0) or being worked down (net < 0). MODELLED.
+  function seededVelocity(n) {
+    const raw = Math.sin(n * 7213 + 71) * 127_009;
+    return raw - Math.floor(raw);
+  }
+  const velocity_trend = [];
+  for (let w = 7; w >= 0; w--) {
+    const weekMs = nowMs - w * 7 * 86_400_000;
+    const monday = new Date(weekMs);
+    monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+    monday.setUTCHours(0, 0, 0, 0);
+    const label  = monday.toISOString().slice(0, 10);
+    const wk     = Math.round(weekMs / (7 * 86_400_000));
+    const opened = Math.round(seededVelocity(wk) * 4);
+    const closed = Math.round(seededVelocity(wk + 100) * 3);
+    velocity_trend.push({
+      week:       label,
+      opened,
+      closed,
+      net:        opened - closed,
+      is_current: w === 0,
+      modelled:   true,
+    });
+  }
+
   res.json({
     risks,
     counts: riskRegister.counts(),
     matrix,
     exposure_trend,
     category_breakdown,
+    velocity_trend,
   });
 });
 

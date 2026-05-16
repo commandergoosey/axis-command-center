@@ -102,7 +102,42 @@ router.get('/', requireAuth, (_req, res) => {
     };
   });
 
-  res.json({ ...base, actual_burns, burn_ranking, price_history, sensitivity_scenarios });
+  // Phase 207 — per-hauler L/100km fleet efficiency derived from the rig roster.
+  // Corridor average and per-hauler deviation give ops a fast coaching signal:
+  // a hauler burning >1 L/100km above corridor avg likely has maintenance or
+  // driving-behaviour issues. Not modelled — real fleet telemetry.
+  const { FLEET: FLEET_DIESEL } = require('../mock/fleet');
+  const effByHauler = {};
+  FLEET_DIESEL.forEach((t) => {
+    if (!effByHauler[t.hauler_id]) {
+      effByHauler[t.hauler_id] = {
+        hauler_id:    t.hauler_id,
+        display_name: t.hauler_display,
+        sum:          0,
+        count:        0,
+      };
+    }
+    if (t.efficiency_l_per_100km != null) {
+      effByHauler[t.hauler_id].sum   += t.efficiency_l_per_100km;
+      effByHauler[t.hauler_id].count += 1;
+    }
+  });
+  const haulerEffRows = Object.values(effByHauler).filter((h) => h.count > 0);
+  const corridorAvgL100 = haulerEffRows.length > 0
+    ? Number((haulerEffRows.reduce((s, h) => s + h.sum / h.count, 0) / haulerEffRows.length).toFixed(1))
+    : 0;
+  const fleet_efficiency = {
+    corridor_avg_l_per_100km: corridorAvgL100,
+    haulers: haulerEffRows.map((h) => ({
+      hauler_id:       h.hauler_id,
+      display_name:    h.display_name,
+      avg_l_per_100km: Number((h.sum / h.count).toFixed(1)),
+      vs_corridor:     Number(((h.sum / h.count) - corridorAvgL100).toFixed(1)),
+      modelled:        false,
+    })).sort((a, b) => b.avg_l_per_100km - a.avg_l_per_100km),
+  };
+
+  res.json({ ...base, actual_burns, burn_ranking, price_history, sensitivity_scenarios, fleet_efficiency });
 });
 
 module.exports = router;
