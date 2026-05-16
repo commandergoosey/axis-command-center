@@ -229,11 +229,37 @@ router.get('/', requireAuth, (req, res) => {
     .filter((h) => h.convoy_count > 0)
     .sort((a, b) => (b.avg_gap_h ?? 0) - (a.avg_gap_h ?? 0)); // widest gap first (potential issue)
 
+  // Phase 201 — phase distribution by hauler.
+  // Breaks down the active convoy list into loading/laden/offload/empty
+  // counts per hauler so dispatch can see where each operator's rigs are
+  // in the cycle without reading individual convoy cards.
+  const phaseByHaulerMap = {};
+  allConvoys.forEach((c) => {
+    if (!phaseByHaulerMap[c.hauler_id]) {
+      phaseByHaulerMap[c.hauler_id] = {
+        hauler_id:      c.hauler_id,
+        hauler_display: c.hauler_display_name ?? c.hauler_id,
+        loading: 0, laden: 0, offload: 0, empty: 0, total: 0,
+      };
+    }
+    const h = phaseByHaulerMap[c.hauler_id];
+    h.total++;
+    const ph = c.phase ?? 'laden';
+    if      (ph === 'loading') h.loading++;
+    else if (ph === 'laden')   h.laden++;
+    else if (ph === 'offload') h.offload++;
+    else if (ph === 'empty')   h.empty++;
+  });
+  const phase_by_hauler = Object.values(phaseByHaulerMap)
+    .filter((h) => h.total > 0)
+    .sort((a, b) => b.total - a.total);
+
   res.json({
     summary: buildSummary(allConvoys),
     convoys:  allConvoys,
     hauler_cycle_metrics,
     departure_cadence,
+    phase_by_hauler,
   });
 });
 

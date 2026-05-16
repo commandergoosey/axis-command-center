@@ -202,6 +202,21 @@ router.get('/', requireAuth, (req, res) => {
     }))
     .sort((a, b) => b.invoiced_usd - a.invoiced_usd);
 
+  // Phase 202 — per-hauler payment days: seeded average days from invoice
+  // to payment. Benchmarked against the contractual 30-day settlement window.
+  // Ordered worst-first so slow payers surface at the top.
+  function seededPayDays(n) {
+    const raw = Math.sin(n * 5779 + 53) * 97_013;
+    return raw - Math.floor(raw);
+  }
+  const payment_days = roster.list().map((h, i) => ({
+    hauler_id:      h.id,
+    hauler_display: h.display_name,
+    avg_days:       Math.round(22 + seededPayDays(i * 7 + 11) * 20), // 22–42 d
+    sla_days:       30,
+    modelled:       true,
+  })).sort((a, b) => b.avg_days - a.avg_days);
+
   res.json({
     generated_at: new Date().toISOString(),
     statements: rows,
@@ -211,6 +226,7 @@ router.get('/', requireAuth, (req, res) => {
     payment_velocity,
     reconciliation,
     hauler_breakdown,
+    payment_days,
   });
 });
 

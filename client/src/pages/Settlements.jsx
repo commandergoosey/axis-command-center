@@ -28,6 +28,7 @@ import SettlementAgeingStrip   from '../components/settlements/SettlementAgeingS
 import PaymentVelocityChart    from '../components/settlements/PaymentVelocityChart';
 import ReconciliationGapStrip  from '../components/settlements/ReconciliationGapStrip';
 import HaulerSettlementShare   from '../components/settlements/HaulerSettlementShare';
+import PaymentDaysChart        from '../components/settlements/PaymentDaysChart';
 import IntelligencePanel       from '../components/intelligence/IntelligencePanel';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
@@ -156,6 +157,10 @@ export default function Settlements() {
         <ReconciliationGapStrip reconciliation={data?.reconciliation} />
         {/* Phase 182 — per-hauler invoiced vs paid breakdown */}
         <HaulerSettlementShare haulerBreakdown={data?.hauler_breakdown} />
+        {/* Phase 202 — avg settlement days per hauler vs SLA */}
+        {data?.payment_days?.length > 0 && (
+          <PaymentDaysChart paymentDays={data.payment_days} />
+        )}
         {ageing && <AgeingPanel ageing={ageing} />}
         <FilterRow
           periods={data?.periods ?? []}

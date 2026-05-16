@@ -90,6 +90,24 @@ router.get('/', (_req, res) => {
     return { month: m.month, dso, modelled: m.modelled };
   });
 
+  // Phase 200 — EBITDA bridge: movement from the prior full month to current MTD.
+  // Decomposes the EBITDA delta into revenue and cost contributions so the
+  // lender can see at a glance whether a margin shift is revenue-driven or
+  // cost-driven (fuel surge, capex, etc.).
+  const priorMonth   = pnl_trend[pnl_trend.length - 2];
+  const currentMonth = pnl_trend[pnl_trend.length - 1];
+  const ebitda_bridge = {
+    prior_month:       priorMonth?.month    ?? null,
+    current_month:     currentMonth?.month  ?? null,
+    prior_ebitda:      priorMonth?.ebitda_usd            ?? 0,
+    current_ebitda:    currentMonth?.ebitda_usd           ?? 0,
+    revenue_delta:     (currentMonth?.revenue_usd          ?? 0) - (priorMonth?.revenue_usd          ?? 0),
+    cost_delta:        (currentMonth?.operating_costs_usd  ?? 0) - (priorMonth?.operating_costs_usd  ?? 0),
+    net_delta:         (currentMonth?.ebitda_usd           ?? 0) - (priorMonth?.ebitda_usd           ?? 0),
+    is_partial:        currentMonth?.partial ?? true,
+    modelled:          true,
+  };
+
   res.json({
     generated_at: new Date().toISOString(),
     dscr,
@@ -118,6 +136,7 @@ router.get('/', (_req, res) => {
     cashflow: CASHFLOW_FORECAST,
     pnl_trend,
     dso_trend,
+    ebitda_bridge,
     by_hauler: byHauler,   // Phase 129
   });
 });

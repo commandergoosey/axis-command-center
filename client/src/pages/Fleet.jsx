@@ -15,6 +15,7 @@ import StatusBadge from '../components/primitives/StatusBadge';
 import RigDetail from '../components/fleet/RigDetail';
 import FleetAvailabilityStrip    from '../components/fleet/FleetAvailabilityStrip';
 import MaintenanceForecastStrip  from '../components/fleet/MaintenanceForecastStrip';
+import PayloadEfficiencyChart    from '../components/fleet/PayloadEfficiencyChart';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
 import { formatKm } from '../lib/format';
 
@@ -152,6 +153,13 @@ export default function Fleet() {
       {roster.data?.maintenance_forecast?.length > 0 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <MaintenanceForecastStrip maintenanceForecast={roster.data.maintenance_forecast} />
+        </div>
+      )}
+
+      {/* Phase 199 — payload efficiency: actual vs rated capacity per hauler */}
+      {roster.data?.payload_efficiency?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <PayloadEfficiencyChart payloadEfficiency={roster.data.payload_efficiency} />
         </div>
       )}
 

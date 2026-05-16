@@ -18,6 +18,7 @@ import CashflowForecast    from '../components/financials/CashflowForecast';
 import ReceivablesPanel    from '../components/financials/ReceivablesPanel';
 import HaulerRevenueStrip  from '../components/financials/HaulerRevenueStrip';
 import DSOTrendChart       from '../components/financials/DSOTrendChart';
+import EbitdaBridgeChart   from '../components/financials/EbitdaBridgeChart';
 import IntelligencePanel   from '../components/intelligence/IntelligencePanel';
 
 export default function Financials() {
@@ -100,6 +101,10 @@ export default function Financials() {
         <CashflowForecast weeks={data?.cashflow} />
         {/* Phase 180 — DSO 6-month trend */}
         <DSOTrendChart dsoTrend={data?.dso_trend} />
+        {/* Phase 200 — EBITDA bridge: prior month → current MTD */}
+        {data?.ebitda_bridge && (
+          <EbitdaBridgeChart ebitdaBridge={data.ebitda_bridge} />
+        )}
         <IntelligencePanel page="financials" />
       </div>
     </PageShell>

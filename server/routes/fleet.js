@@ -17,6 +17,7 @@ const router = express.Router();
 
 const { FLEET }   = require('../mock/fleet');
 const { DRIVERS } = require('../mock/drivers');
+const { TRIPS }   = require('../mock/trips');
 const fleetStatus    = require('../state/fleetStatus');
 const rigAssignments = require('../state/rigAssignments');
 const fuelLogs       = require('../state/fuelLogs');
@@ -103,12 +104,55 @@ router.get('/', (req, res) => {
     .filter((t) => t.km_to_service <= SERVICE_LOOKAHEAD_KM)
     .sort((a, b) => a.km_to_service - b.km_to_service);
 
+  // Phase 199 — payload efficiency: actual vs rated capacity per hauler.
+  // Pairs each hauler's fleet average payload_capacity_t with the mean
+  // tonnage_t across their southbound trips, giving an utilisation %.
+  const tripPayloadByHauler = {};
+  TRIPS
+    .filter((t) => t.direction === 'southbound' && (t.tonnage_t ?? 0) > 0)
+    .forEach((t) => {
+      if (!tripPayloadByHauler[t.hauler_id]) tripPayloadByHauler[t.hauler_id] = { sum: 0, count: 0 };
+      tripPayloadByHauler[t.hauler_id].sum   += t.tonnage_t;
+      tripPayloadByHauler[t.hauler_id].count += 1;
+    });
+  const capacityByHauler = {};
+  rows.forEach((t) => {
+    if (!capacityByHauler[t.hauler_id]) {
+      capacityByHauler[t.hauler_id] = {
+        hauler_id:      t.hauler_id,
+        hauler_display: t.hauler_display ?? t.hauler_id,
+        sum: 0, count: 0,
+      };
+    }
+    capacityByHauler[t.hauler_id].sum   += t.payload_capacity_t ?? 40;
+    capacityByHauler[t.hauler_id].count += 1;
+  });
+  const payload_efficiency = Object.values(capacityByHauler).map((h) => {
+    const avg_capacity_t = h.count > 0 ? Number((h.sum / h.count).toFixed(1)) : 40;
+    const trips = tripPayloadByHauler[h.hauler_id];
+    const avg_payload_t = trips && trips.count > 0
+      ? Number((trips.sum / trips.count).toFixed(1)) : null;
+    const efficiency_pct = avg_payload_t != null && avg_capacity_t > 0
+      ? Math.round((avg_payload_t / avg_capacity_t) * 100) : null;
+    return {
+      hauler_id:      h.hauler_id,
+      hauler_display: h.hauler_display,
+      avg_capacity_t,
+      avg_payload_t,
+      efficiency_pct,
+      trip_count: trips?.count ?? 0,
+    };
+  })
+    .filter((h) => h.efficiency_pct != null)
+    .sort((a, b) => (b.efficiency_pct ?? 0) - (a.efficiency_pct ?? 0));
+
   res.json({
     generated_at: new Date().toISOString(),
     total:  rows.length,
     trucks: rows,
     availability_by_hauler,
     maintenance_forecast,
+    payload_efficiency,
   });
 });
 

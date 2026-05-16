@@ -26,6 +26,7 @@ import { useAuth } from '../lib/AuthContext';
 import ClaimsExposureChart   from '../components/claims/ClaimsExposureChart';
 import ClaimsMonthlyTrend   from '../components/claims/ClaimsMonthlyTrend';
 import ClaimAgeProfile      from '../components/claims/ClaimAgeProfile';
+import ClaimRecoveryChart   from '../components/claims/ClaimRecoveryChart';
 
 const STATUS_TONE = {
   filed:        'var(--text-secondary)',
@@ -90,6 +91,10 @@ export default function Claims() {
         <ClaimsMonthlyTrend monthlyTrend={data?.monthly_trend} />
         {/* Phase 183 — open claim age profile by days since filed */}
         <ClaimAgeProfile ageProfile={data?.age_profile} />
+        {/* Phase 203 — insurance recovery rate by hauler */}
+        {data?.recovery_by_hauler?.length > 0 && (
+          <ClaimRecoveryChart recoveryByHauler={data.recovery_by_hauler} />
+        )}
 
         {!data ? (
           <p style={muted}>Loading…</p>

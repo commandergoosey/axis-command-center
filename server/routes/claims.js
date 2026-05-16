@@ -147,6 +147,39 @@ router.get('/', requireAuth, (req, res) => {
     is_overdue:   b.min >= 31,
   }));
 
+  // Phase 203 — claim recovery rate by hauler.
+  // Recovery % = paid/approved_amount_usd ÷ total claim_amount_usd.
+  // Shows which operators are achieving insurance payouts vs leaving
+  // claims in flight; relevant to corridor DSCR via insurance recovery line.
+  const recoveryMap = {};
+  rows.forEach((c) => {
+    if (!recoveryMap[c.hauler_id]) {
+      recoveryMap[c.hauler_id] = {
+        hauler_id:        c.hauler_id,
+        hauler_display:   c.hauler_id,
+        claim_amount_usd: 0,
+        recovered_usd:    0,
+        claim_count:      0,
+        paid_count:       0,
+      };
+    }
+    const h = recoveryMap[c.hauler_id];
+    h.claim_amount_usd += c.claim_amount_usd ?? 0;
+    h.claim_count++;
+    if (c.status === 'paid') {
+      h.recovered_usd += c.approved_amount_usd ?? c.claim_amount_usd ?? 0;
+      h.paid_count++;
+    }
+  });
+  const recovery_by_hauler = Object.values(recoveryMap).map((h) => ({
+    ...h,
+    claim_amount_usd: Math.round(h.claim_amount_usd),
+    recovered_usd:    Math.round(h.recovered_usd),
+    recovery_pct:     h.claim_amount_usd > 0
+      ? Math.round((h.recovered_usd / h.claim_amount_usd) * 100)
+      : 0,
+  })).sort((a, b) => b.claim_amount_usd - a.claim_amount_usd);
+
   res.json({
     generated_at: new Date().toISOString(),
     claims: rows,
@@ -154,6 +187,7 @@ router.get('/', requireAuth, (req, res) => {
     exposure_by_type,
     monthly_trend,
     age_profile,
+    recovery_by_hauler,
   });
 });
 
