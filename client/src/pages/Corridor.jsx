@@ -16,6 +16,7 @@ import CorridorConditions from '../components/corridor/CorridorConditions';
 import HealthTrendChart      from '../components/corridor/HealthTrendChart';
 import SegmentUtilChart      from '../components/corridor/SegmentUtilChart';
 import ThroughputForecast    from '../components/corridor/ThroughputForecast';
+import WaypointDwellChart    from '../components/corridor/WaypointDwellChart';
 import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 
 const MODE_OPTIONS = [
@@ -104,6 +105,13 @@ export default function Corridor() {
       {data?.throughput_forecast?.length > 0 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <ThroughputForecast throughputForecast={data.throughput_forecast} />
+        </div>
+      )}
+
+      {/* Phase 215 — avg dwell time per waypoint (weighbridges, rest stops, junction) */}
+      {data?.waypoint_dwell?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <WaypointDwellChart waypointDwell={data.waypoint_dwell} />
         </div>
       )}
 

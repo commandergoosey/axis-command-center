@@ -108,6 +108,26 @@ router.get('/', (_req, res) => {
     modelled:          true,
   };
 
+  // Phase 217 — monthly operating cost breakdown by component. Each month's
+  // total operating_costs_usd is split into fuel / driver / maint / other
+  // using seeded proportions anchored to realistic corridor cost structure.
+  // MODELLED for all months including the current partial month.
+  function seededCostComp(n) {
+    const raw = Math.sin(n * 5507 + 51) * 95_017;
+    return raw - Math.floor(raw);
+  }
+  const cost_component_trend = pnl_trend.map((m, idx) => {
+    const total      = m.operating_costs_usd ?? 0;
+    const fuelFrac   = 0.38 + seededCostComp(idx * 7 + 1) * 0.06; // 38–44%
+    const driverFrac = 0.22 + seededCostComp(idx * 7 + 2) * 0.04; // 22–26%
+    const maintFrac  = 0.14 + seededCostComp(idx * 7 + 3) * 0.04; // 14–18%
+    const fuel       = Math.round(total * fuelFrac);
+    const driver     = Math.round(total * driverFrac);
+    const maint      = Math.round(total * maintFrac);
+    const other      = Math.max(0, total - fuel - driver - maint);
+    return { month: m.month, fuel_usd: fuel, driver_usd: driver, maint_usd: maint, other_usd: other, modelled: true };
+  });
+
   res.json({
     generated_at: new Date().toISOString(),
     dscr,
@@ -138,6 +158,7 @@ router.get('/', (_req, res) => {
     dso_trend,
     ebitda_bridge,
     by_hauler: byHauler,   // Phase 129
+    cost_component_trend,
   });
 });
 

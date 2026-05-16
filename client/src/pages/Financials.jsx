@@ -18,8 +18,9 @@ import CashflowForecast    from '../components/financials/CashflowForecast';
 import ReceivablesPanel    from '../components/financials/ReceivablesPanel';
 import HaulerRevenueStrip  from '../components/financials/HaulerRevenueStrip';
 import DSOTrendChart       from '../components/financials/DSOTrendChart';
-import EbitdaBridgeChart   from '../components/financials/EbitdaBridgeChart';
-import IntelligencePanel   from '../components/intelligence/IntelligencePanel';
+import EbitdaBridgeChart        from '../components/financials/EbitdaBridgeChart';
+import CostComponentTrendChart  from '../components/financials/CostComponentTrendChart';
+import IntelligencePanel        from '../components/intelligence/IntelligencePanel';
 
 export default function Financials() {
   const [data, setData]   = useState(null);
@@ -104,6 +105,10 @@ export default function Financials() {
         {/* Phase 200 — EBITDA bridge: prior month → current MTD */}
         {data?.ebitda_bridge && (
           <EbitdaBridgeChart ebitdaBridge={data.ebitda_bridge} />
+        )}
+        {/* Phase 217 — monthly operating cost by component (fuel/driver/maint/other) */}
+        {data?.cost_component_trend?.length > 0 && (
+          <CostComponentTrendChart costComponentTrend={data.cost_component_trend} />
         )}
         <IntelligencePanel page="financials" />
       </div>

@@ -29,6 +29,7 @@ import PaymentVelocityChart    from '../components/settlements/PaymentVelocityCh
 import ReconciliationGapStrip  from '../components/settlements/ReconciliationGapStrip';
 import HaulerSettlementShare   from '../components/settlements/HaulerSettlementShare';
 import PaymentDaysChart        from '../components/settlements/PaymentDaysChart';
+import AgingBucketTrendChart   from '../components/settlements/AgingBucketTrendChart';
 import IntelligencePanel       from '../components/intelligence/IntelligencePanel';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
@@ -160,6 +161,12 @@ export default function Settlements() {
         {/* Phase 202 — avg settlement days per hauler vs SLA */}
         {data?.payment_days?.length > 0 && (
           <PaymentDaysChart paymentDays={data.payment_days} />
+        )}
+        {/* Phase 216 — 8-week aging bucket trend */}
+        {data?.aging_trend?.length > 0 && (
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <AgingBucketTrendChart agingTrend={data.aging_trend} />
+          </div>
         )}
         {ageing && <AgeingPanel ageing={ageing} />}
         <FilterRow

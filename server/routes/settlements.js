@@ -217,6 +217,29 @@ router.get('/', requireAuth, (req, res) => {
     modelled:       true,
   })).sort((a, b) => b.avg_days - a.avg_days);
 
+  // Phase 216 — 8-week aging bucket trend. Seeded weekly snapshots show how
+  // outstanding amounts shift across current / 30d / 60d / 90d+ bands over time.
+  // A rising 90d+ tail signals a collection problem before it hits the headline.
+  function seededAging(n) {
+    const raw = Math.sin(n * 6473 + 59) * 111_013;
+    return raw - Math.floor(raw);
+  }
+  const AGING_BASE_USD = 320_000;
+  const aging_trend = [];
+  for (let w = 7; w >= 0; w--) {
+    const mon = new Date(Date.now() - w * 7 * 86_400_000);
+    mon.setUTCDate(mon.getUTCDate() - ((mon.getUTCDay() + 6) % 7));
+    mon.setUTCHours(0, 0, 0, 0);
+    const week_of = mon.toISOString().slice(0, 10);
+    const seed    = Math.round(mon.getTime() / (7 * 86_400_000));
+    const total   = Math.round(AGING_BASE_USD * (0.85 + seededAging(seed) * 0.30));
+    const current = Math.round(total * (0.40 + seededAging(seed + 100) * 0.20));
+    const d30     = Math.round((total - current) * (0.45 + seededAging(seed + 200) * 0.20));
+    const d60     = Math.round((total - current - d30) * (0.55 + seededAging(seed + 300) * 0.25));
+    const d90plus = Math.max(0, total - current - d30 - d60);
+    aging_trend.push({ week_of, current_usd: current, d30_usd: d30, d60_usd: d60, d90plus_usd: d90plus });
+  }
+
   res.json({
     generated_at: new Date().toISOString(),
     statements: rows,
@@ -227,6 +250,7 @@ router.get('/', requireAuth, (req, res) => {
     reconciliation,
     hauler_breakdown,
     payment_days,
+    aging_trend,
   });
 });
 

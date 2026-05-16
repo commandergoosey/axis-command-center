@@ -118,6 +118,22 @@ router.get('/', (_req, res) => {
     };
   });
 
+  // Phase 215 — per-waypoint average dwell time (minutes). Depots are
+  // origin/destination and not meaningful dwell points; all others receive a
+  // seeded estimate anchored to realistic field ranges for each stop kind.
+  function seededDwell(n) {
+    const raw = Math.sin(n * 4127 + 43) * 71_009;
+    return raw - Math.floor(raw);
+  }
+  const DWELL_RANGE = { weighbridge: [8, 22], junction: [3, 10], rest: [20, 48] };
+  const waypoint_dwell = WAYPOINTS
+    .filter((w) => DWELL_RANGE[w.kind])
+    .map((w, i) => {
+      const [lo, hi] = DWELL_RANGE[w.kind];
+      const avg_min = Math.round(lo + seededDwell(i * 7 + 3) * (hi - lo));
+      return { id: w.id, label: w.label, km: w.km, kind: w.kind, avg_min, modelled: true };
+    });
+
   res.json({
     corridor: {
       name:         'Nyinahin–Takoradi',
@@ -131,6 +147,7 @@ router.get('/', (_req, res) => {
     health_history,
     throughput_forecast,
     segment_util,
+    waypoint_dwell,
   });
 });
 

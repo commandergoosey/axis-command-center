@@ -19,6 +19,7 @@ import CostEfficiencyTrend from '../components/trips/CostEfficiencyTrend';
 import HaulerTripSummary      from '../components/trips/HaulerTripSummary';
 import DelayRootCauseChart    from '../components/trips/DelayRootCauseChart';
 import SLAHeatmapChart        from '../components/trips/SLAHeatmapChart';
+import TripCostBreakdownChart from '../components/trips/TripCostBreakdownChart';
 import TripsTable from '../components/trips/TripsTable';
 import TripDetail from '../components/trips/TripDetail';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
@@ -158,6 +159,13 @@ export default function Trips() {
       {data?.sla_heatmap?.length > 0 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <SLAHeatmapChart slaHeatmap={data.sla_heatmap} />
+        </div>
+      )}
+
+      {/* Phase 214 — per-hauler cost component breakdown (fuel/driver/maint/tolls) */}
+      {data?.cost_component_by_hauler?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <TripCostBreakdownChart costComponentByHauler={data.cost_component_by_hauler} />
         </div>
       )}
 

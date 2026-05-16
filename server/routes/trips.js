@@ -210,6 +210,44 @@ router.get('/', (req, res) => {
     })),
   }));
 
+  // Phase 214 — per-hauler cost component breakdown: fuel / driver / maint / tolls.
+  // Groups the full TRIPS set by hauler so the totals are independent of the
+  // active page filter. Sorted highest-spend hauler first.
+  const compByHauler = {};
+  TRIPS.forEach((t) => {
+    if (!compByHauler[t.hauler_id]) {
+      compByHauler[t.hauler_id] = {
+        hauler_id:   t.hauler_id,
+        hauler_display: haulersById[t.hauler_id] ?? t.hauler_id,
+        fuel_usd:   0,
+        driver_usd: 0,
+        maint_usd:  0,
+        tolls_usd:  0,
+        total_usd:  0,
+        trips:      0,
+      };
+    }
+    const c = compByHauler[t.hauler_id];
+    c.trips      += 1;
+    c.fuel_usd   += t.cost?.fuel_usd   ?? 0;
+    c.driver_usd += t.cost?.driver_usd ?? 0;
+    c.maint_usd  += t.cost?.maint_usd  ?? 0;
+    c.tolls_usd  += t.cost?.tolls_usd  ?? 0;
+    c.total_usd  += t.cost?.total_usd  ?? 0;
+  });
+  const cost_component_by_hauler = Object.values(compByHauler)
+    .map((h) => ({
+      hauler_id:      h.hauler_id,
+      hauler_display: h.hauler_display,
+      fuel_usd:       Math.round(h.fuel_usd),
+      driver_usd:     Math.round(h.driver_usd),
+      maint_usd:      Math.round(h.maint_usd),
+      tolls_usd:      Math.round(h.tolls_usd),
+      total_usd:      Math.round(h.total_usd),
+      trips:          h.trips,
+    }))
+    .sort((a, b) => b.total_usd - a.total_usd);
+
   res.json({
     count: liveTrips.length + filtered.length,
     hauler_id: haulerId,
@@ -220,6 +258,7 @@ router.get('/', (req, res) => {
     hauler_summary,
     delay_causes,
     sla_heatmap,
+    cost_component_by_hauler,
   });
 });
 

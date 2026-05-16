@@ -16,6 +16,7 @@ import RigDetail from '../components/fleet/RigDetail';
 import FleetAvailabilityStrip    from '../components/fleet/FleetAvailabilityStrip';
 import MaintenanceForecastStrip  from '../components/fleet/MaintenanceForecastStrip';
 import PayloadEfficiencyChart    from '../components/fleet/PayloadEfficiencyChart';
+import FleetStatusByHaulerChart  from '../components/fleet/FleetStatusByHaulerChart';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
 import { formatKm } from '../lib/format';
 
@@ -160,6 +161,13 @@ export default function Fleet() {
       {roster.data?.payload_efficiency?.length > 0 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <PayloadEfficiencyChart payloadEfficiency={roster.data.payload_efficiency} />
+        </div>
+      )}
+
+      {/* Phase 218 — fleet status breakdown by hauler (active / idle / garage) */}
+      {roster.data?.availability_by_hauler?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <FleetStatusByHaulerChart availabilityByHauler={roster.data.availability_by_hauler} />
         </div>
       )}
 
