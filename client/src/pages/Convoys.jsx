@@ -24,8 +24,9 @@ import ConvoyTable          from '../components/convoys/ConvoyTable';
 import ConvoyDetail         from '../components/convoys/ConvoyDetail';
 import ConvoyCycleMetrics   from '../components/convoys/ConvoyCycleMetrics';
 import ConvoyCadenceChart   from '../components/convoys/ConvoyCadenceChart';
-import ConvoyPhaseChart     from '../components/convoys/ConvoyPhaseChart';
-import IntelligencePanel    from '../components/intelligence/IntelligencePanel';
+import ConvoyPhaseChart        from '../components/convoys/ConvoyPhaseChart';
+import ConvoySpeedProfileChart from '../components/convoys/ConvoySpeedProfileChart';
+import IntelligencePanel       from '../components/intelligence/IntelligencePanel';
 
 const PHASE_OPTIONS = [
   ['', 'All phases'],
@@ -540,6 +541,11 @@ export default function Convoys() {
         {/* Phase 201 — active convoy phase distribution by hauler */}
         {data?.phase_by_hauler?.length > 0 && (
           <ConvoyPhaseChart phaseByHauler={data.phase_by_hauler} />
+        )}
+
+        {/* Phase 219 — per-segment average laden speed profile */}
+        {data?.speed_profile?.length > 0 && (
+          <ConvoySpeedProfileChart speedProfile={data.speed_profile} />
         )}
 
         <IntelligencePanel page="convoys" />

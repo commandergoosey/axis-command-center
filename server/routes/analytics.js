@@ -223,7 +223,38 @@ router.get('/', (req, res) => {
         rated_payload_t: RATED_PAYLOAD_T,
       }));
 
-    res.json({ ...base, today_live, hauler_attainment, weekday_pattern, efficiency_benchmark, take_or_pay_risk, revenue_per_km, avg_payload_trend });
+    // Phase 222 — per-hauler cost-per-tonne ranking derived from TRIPS.
+    // Groups all southbound laden trips by hauler, computes avg total_cost / tonne.
+    // Lower cost/tonne = better efficiency. Sorted cheapest first.
+    const haulerCostMap = {};
+    TRIPS
+      .filter((t) => t.tonnage_t > 0 && t.cost?.total_usd > 0)
+      .forEach((t) => {
+        if (!haulerCostMap[t.hauler_id]) {
+          haulerCostMap[t.hauler_id] = {
+            hauler_id:      t.hauler_id,
+            hauler_display: roster.list().find((h) => h.id === t.hauler_id)?.display_name ?? t.hauler_id,
+            cost_usd:       0,
+            tonnes:         0,
+            trips:          0,
+          };
+        }
+        const h = haulerCostMap[t.hauler_id];
+        h.cost_usd += t.cost.total_usd;
+        h.tonnes   += t.tonnage_t;
+        h.trips    += 1;
+      });
+    const cost_per_tonne_rank = Object.values(haulerCostMap)
+      .map((h) => ({
+        hauler_id:           h.hauler_id,
+        hauler_display:      h.hauler_display,
+        avg_cost_per_tonne:  Number((h.cost_usd / h.tonnes).toFixed(2)),
+        trips:               h.trips,
+        corridor_avg:        false, // populated client-side
+      }))
+      .sort((a, b) => a.avg_cost_per_tonne - b.avg_cost_per_tonne);
+
+    res.json({ ...base, today_live, hauler_attainment, weekday_pattern, efficiency_benchmark, take_or_pay_risk, revenue_per_km, avg_payload_trend, cost_per_tonne_rank });
   } catch (err) {
     console.error('[analytics]', err);
     res.status(500).json({ error: 'Analytics composition failed' });

@@ -32,6 +32,7 @@ import FuelEfficiencyBenchmark from '../components/analytics/FuelEfficiencyBench
 import TakeOrPayChart          from '../components/analytics/TakeOrPayChart';
 import RevenuePerKmChart       from '../components/analytics/RevenuePerKmChart';
 import AvgPayloadTrendChart    from '../components/analytics/AvgPayloadTrendChart';
+import HaulerCostRankChart    from '../components/analytics/HaulerCostRankChart';
 import IntelligencePanel       from '../components/intelligence/IntelligencePanel';
 
 /* ── Token colours (CSS vars resolved at runtime) ─────────────────── */
@@ -447,6 +448,11 @@ export default function Analytics() {
         {/* ── Phase 210: Avg payload per southbound trip, 12-week trend ─ */}
         {data?.avg_payload_trend?.length > 0 && (
           <AvgPayloadTrendChart avgPayloadTrend={data.avg_payload_trend} />
+        )}
+
+        {/* ── Phase 222: Per-hauler cost-per-tonne efficiency ranking ─ */}
+        {data?.cost_per_tonne_rank?.length > 0 && (
+          <HaulerCostRankChart costPerTonneRank={data.cost_per_tonne_rank} />
         )}
 
         <IntelligencePanel page="analytics" />

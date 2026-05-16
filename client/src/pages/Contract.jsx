@@ -17,6 +17,7 @@ import RunRatePanel          from '../components/contract/RunRatePanel';
 import ForecastAnomalyStrip  from '../components/contract/ForecastAnomalyStrip';
 import SLAMeter              from '../components/contract/SLAMeter';
 import PaymentSecurityCard   from '../components/contract/PaymentSecurityCard';
+import ContractSLATrendChart from '../components/contract/ContractSLATrendChart';
 import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 
 export default function Contract() {
@@ -86,6 +87,11 @@ export default function Contract() {
           <SLAMeter sla={data?.sla} />
           <PaymentSecurityCard paymentSecurity={data?.payment_security} />
         </div>
+
+        {/* Phase 223 — 6-month SLA attainment trend */}
+        {data?.sla_monthly_trend?.length > 0 && (
+          <ContractSLATrendChart slaMonthlyTrend={data.sla_monthly_trend} />
+        )}
 
         <IntelligencePanel page="contract" />
       </div>

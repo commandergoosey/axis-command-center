@@ -25,7 +25,7 @@ const roster = require('../state/roster');
 const convoyState = require('../state/convoyState');
 const notifications = require('../state/notifications');
 const { findById: findUser, list: listUsers } = require('../state/users');
-const { ACTIVE_CONVOYS, WAYPOINTS } = require('../mock/corridor');
+const { ACTIVE_CONVOYS, WAYPOINTS, SEGMENTS } = require('../mock/corridor');
 const { FLEET } = require('../mock/fleet');
 const { DRIVERS } = require('../mock/drivers');
 const { ALERTS } = require('../mock/alerts');
@@ -254,12 +254,37 @@ router.get('/', requireAuth, (req, res) => {
     .filter((h) => h.total > 0)
     .sort((a, b) => b.total - a.total);
 
+  // Phase 219 — per-segment average speed profile. Southbound laden runs
+  // are the bottleneck (gross weight ~110 t limits climbing speed).
+  // Seeded per segment so the chart is stable across requests.
+  // Colour thresholds: ≥65 km/h = green, 55–64 = amber, <55 = rust.
+  function seededSpeed(n) {
+    const raw = Math.sin(n * 7517 + 67) * 133_007;
+    return raw - Math.floor(raw);
+  }
+  const waypointById = Object.fromEntries(WAYPOINTS.map((w) => [w.id, w]));
+  const speed_profile = SEGMENTS.map((seg, i) => {
+    const fromWp  = waypointById[seg.from];
+    const toWp    = waypointById[seg.to];
+    const dist_km = (fromWp && toWp) ? toWp.km - fromWp.km : null;
+    const avg_kmh = Math.round(52 + seededSpeed(i * 7 + 5) * 20); // 52–72 km/h
+    return {
+      id:       seg.id,
+      label:    `${fromWp?.label ?? seg.from} → ${toWp?.label ?? seg.to}`,
+      dist_km,
+      laden:    seg.laden,
+      avg_kmh,
+      modelled: true,
+    };
+  });
+
   res.json({
     summary: buildSummary(allConvoys),
     convoys:  allConvoys,
     hauler_cycle_metrics,
     departure_cadence,
     phase_by_hauler,
+    speed_profile,
   });
 });
 

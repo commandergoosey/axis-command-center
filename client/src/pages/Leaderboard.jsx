@@ -22,7 +22,8 @@ import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import FatigueMonitorStrip from '../components/drivers/FatigueMonitorStrip';
 import HOSTrendChart       from '../components/drivers/HOSTrendChart';
-import HaulerRadarChart    from '../components/drivers/HaulerRadarChart';
+import HaulerRadarChart         from '../components/drivers/HaulerRadarChart';
+import CompositeScoreHistogram  from '../components/drivers/CompositeScoreHistogram';
 
 /* ── Medal colours ───────────────────────────────────────────────── */
 const MEDAL = {
@@ -223,6 +224,13 @@ export default function Leaderboard() {
 
         {/* ── Phase 160: per-hauler performance radar ──────────────── */}
         {!isHaulerAdmin && <HaulerRadarChart haulerRadar={data?.hauler_radar} />}
+
+        {/* Phase 221 — composite score distribution histogram */}
+        {data?.rankings?.length > 0 && (
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <CompositeScoreHistogram rankings={data.rankings} />
+          </div>
+        )}
 
         {/* ── Full ranking table ───────────────────────────────────── */}
         <section>

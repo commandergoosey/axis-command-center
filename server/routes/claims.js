@@ -180,6 +180,31 @@ router.get('/', requireAuth, (req, res) => {
       : 0,
   })).sort((a, b) => b.claim_amount_usd - a.claim_amount_usd);
 
+  // Phase 220 — total claim exposure (USD) bucketed by status.
+  // Gives ops a one-glance view of how much money is in each workflow stage.
+  // Uses the full (unfiltered) CLAIMS set so the chart is consistent across
+  // page filters. Ordered by workflow stage: open → review → approved → paid → rejected.
+  const STATUS_ORDER = ['open', 'under_review', 'approved', 'paid', 'rejected'];
+  const STATUS_LABEL = {
+    open:         'Open',
+    under_review: 'Under review',
+    approved:     'Approved',
+    paid:         'Paid',
+    rejected:     'Rejected',
+  };
+  const allClaims = CLAIMS.map(claimsState.apply);
+  const byStatus  = {};
+  STATUS_ORDER.forEach((s) => { byStatus[s] = { status: s, label: STATUS_LABEL[s], count: 0, amount_usd: 0 }; });
+  allClaims.forEach((c) => {
+    const s = c.status;
+    if (!byStatus[s]) return;
+    byStatus[s].count++;
+    byStatus[s].amount_usd += c.claim_amount_usd ?? 0;
+  });
+  const amount_by_status = STATUS_ORDER
+    .map((s) => ({ ...byStatus[s], amount_usd: Math.round(byStatus[s].amount_usd) }))
+    .filter((s) => s.count > 0);
+
   res.json({
     generated_at: new Date().toISOString(),
     claims: rows,
@@ -188,6 +213,7 @@ router.get('/', requireAuth, (req, res) => {
     monthly_trend,
     age_profile,
     recovery_by_hauler,
+    amount_by_status,
   });
 });
 

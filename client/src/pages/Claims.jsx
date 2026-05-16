@@ -26,7 +26,8 @@ import { useAuth } from '../lib/AuthContext';
 import ClaimsExposureChart   from '../components/claims/ClaimsExposureChart';
 import ClaimsMonthlyTrend   from '../components/claims/ClaimsMonthlyTrend';
 import ClaimAgeProfile      from '../components/claims/ClaimAgeProfile';
-import ClaimRecoveryChart   from '../components/claims/ClaimRecoveryChart';
+import ClaimRecoveryChart       from '../components/claims/ClaimRecoveryChart';
+import ClaimAmountByStatusChart from '../components/claims/ClaimAmountByStatusChart';
 
 const STATUS_TONE = {
   filed:        'var(--text-secondary)',
@@ -94,6 +95,10 @@ export default function Claims() {
         {/* Phase 203 — insurance recovery rate by hauler */}
         {data?.recovery_by_hauler?.length > 0 && (
           <ClaimRecoveryChart recoveryByHauler={data.recovery_by_hauler} />
+        )}
+        {/* Phase 220 — claim exposure by workflow status */}
+        {data?.amount_by_status?.length > 0 && (
+          <ClaimAmountByStatusChart amountByStatus={data.amount_by_status} />
         )}
 
         {!data ? (

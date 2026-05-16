@@ -151,6 +151,25 @@ router.get('/', (_req, res) => {
     anomalies: (() => {
       try { return forecastAnomalies.detect(); } catch (_) { return []; }
     })(),
+    // Phase 223 — 6-month SLA attainment trend. Seeded monthly attainment %
+    // anchored to a realistic corridor SLA of 85%. Months trending below the
+    // SLA floor appear in rust on the chart to surface slippage early.
+    sla_monthly_trend: (() => {
+      function seededSLA(n) {
+        const raw = Math.sin(n * 4523 + 41) * 78_003;
+        return raw - Math.floor(raw);
+      }
+      const SLA_TARGET_PCT = 85;
+      const result = [];
+      for (let m = 5; m >= 0; m--) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - m, 1));
+        const monthKey = d.toISOString().slice(0, 7);
+        const seed     = d.getUTCFullYear() * 1000 + d.getUTCMonth() * 17;
+        const pct      = Math.round(78 + seededSLA(seed) * 16); // 78–94%
+        result.push({ month: monthKey, attainment_pct: pct, target_pct: SLA_TARGET_PCT, modelled: true });
+      }
+      return result;
+    })(),
     // Phase 162 — cumulative take-or-pay projection to year-end.
     // Past months: actual cumulative from DELIVERY_HISTORY + live MTD.
     // Future months: extrapolated at the current MTD daily run-rate.
