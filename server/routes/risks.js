@@ -86,11 +86,34 @@ router.get('/', requireAuth, (_req, res) => {
     });
   }
 
+  // Phase 187 — risk category breakdown. Groups open (non-closed) risks by
+  // category and computes a weighted exposure score (severity × likelihood)
+  // per category so ops can see which domain is carrying the most risk weight.
+  const SEV_W2  = { low: 1, medium: 2, high: 4, critical: 8 };
+  const LIKE_W2 = { rare: 1, unlikely: 2, possible: 3, likely: 4, almost_certain: 5 };
+  const CATEGORY_ORDER = ['operational', 'commercial', 'financial', 'compliance', 'reputational', 'strategic'];
+  const catMap = {};
+  openRisks.forEach((r) => {
+    const cat = r.category || 'operational';
+    if (!catMap[cat]) catMap[cat] = { category: cat, count: 0, weighted_score: 0 };
+    catMap[cat].count++;
+    catMap[cat].weighted_score += (SEV_W2[r.severity] ?? 1) * (LIKE_W2[r.likelihood] ?? 1);
+  });
+  const category_breakdown = CATEGORY_ORDER
+    .map((cat) => ({
+      category:       cat,
+      count:          catMap[cat]?.count         ?? 0,
+      weighted_score: catMap[cat]?.weighted_score ?? 0,
+    }))
+    .filter((c) => c.count > 0)
+    .sort((a, b) => b.weighted_score - a.weighted_score);
+
   res.json({
     risks,
     counts: riskRegister.counts(),
     matrix,
     exposure_trend,
+    category_breakdown,
   });
 });
 

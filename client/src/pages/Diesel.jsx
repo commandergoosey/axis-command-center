@@ -24,6 +24,7 @@ import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import BurnEfficiencyStrip      from '../components/diesel/BurnEfficiencyStrip';
 import HaulerBurnVarianceChart  from '../components/diesel/HaulerBurnVarianceChart';
+import TariffSensitivityChart   from '../components/diesel/TariffSensitivityChart';
 import DieselPriceTrend         from '../components/diesel/DieselPriceTrend';
 
 export default function Diesel() {
@@ -81,6 +82,9 @@ export default function Diesel() {
             burnRanking={data.burn_ranking}
             corridorAvg={data.fleet_burn?.corridor_avg_fuel_usd_per_tonne}
           />
+
+          {/* Phase 186 — EBITDA sensitivity to diesel price scenarios */}
+          <TariffSensitivityChart sensitivityScenarios={data.sensitivity_scenarios} />
 
           {/* Phase 159 — 12-week diesel price & burn-cost trend */}
           <DieselPriceTrend priceHistory={data.price_history} />

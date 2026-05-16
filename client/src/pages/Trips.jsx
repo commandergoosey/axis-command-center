@@ -17,6 +17,7 @@ import CostPerRouteCard from '../components/trips/CostPerRouteCard';
 import DelayHeatmap from '../components/trips/DelayHeatmap';
 import CostEfficiencyTrend from '../components/trips/CostEfficiencyTrend';
 import HaulerTripSummary   from '../components/trips/HaulerTripSummary';
+import SLAHeatmapChart     from '../components/trips/SLAHeatmapChart';
 import TripsTable from '../components/trips/TripsTable';
 import TripDetail from '../components/trips/TripDetail';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
@@ -144,6 +145,13 @@ export default function Trips() {
       </div>
 
       <TripsTable trips={filteredTrips} onRowClick={(t) => setSelectedId(t.id)} />
+
+      {/* Phase 188 — SLA attainment heatmap (day-of-week × hauler) */}
+      {data?.sla_heatmap?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <SLAHeatmapChart slaHeatmap={data.sla_heatmap} />
+        </div>
+      )}
 
       <div style={{ marginTop: 'var(--space-4)' }}>
         <IntelligencePanel page="trips" />

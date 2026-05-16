@@ -194,10 +194,46 @@ router.get('/', requireAuth, (req, res) => {
     }))
     .sort((a, b) => (a.avg_cycle_h ?? 999) - (b.avg_cycle_h ?? 999));
 
+  // Phase 184 — departure cadence by hauler. Groups convoys by hauler_id,
+  // sorts each hauler's set by planned_departure_iso, computes inter-departure
+  // gap in hours. A gap wider than TARGET_GAP_H suggests the hauler is
+  // bunching runs rather than spreading them across the shift — a throughput risk.
+  const TARGET_GAP_H = 6; // ideal minimum spacing between consecutive convoy departures
+  const cadenceByHauler = {};
+  allConvoys.forEach((c) => {
+    if (!cadenceByHauler[c.hauler_id]) {
+      cadenceByHauler[c.hauler_id] = {
+        hauler_id:      c.hauler_id,
+        hauler_display: c.hauler_display_name ?? c.hauler_id,
+        departures:     [],
+      };
+    }
+    if (c.planned_departure_iso) {
+      cadenceByHauler[c.hauler_id].departures.push(new Date(c.planned_departure_iso).getTime());
+    }
+  });
+  const departure_cadence = Object.values(cadenceByHauler)
+    .map((h) => {
+      const sorted = h.departures.slice().sort((a, b) => a - b);
+      const gaps = sorted.slice(1).map((t, i) => (t - sorted[i]) / 3_600_000); // ms → h
+      return {
+        hauler_id:      h.hauler_id,
+        hauler_display: h.hauler_display,
+        convoy_count:   sorted.length,
+        avg_gap_h:      gaps.length > 0 ? Number((gaps.reduce((s, v) => s + v, 0) / gaps.length).toFixed(1)) : null,
+        min_gap_h:      gaps.length > 0 ? Number(Math.min(...gaps).toFixed(1)) : null,
+        max_gap_h:      gaps.length > 0 ? Number(Math.max(...gaps).toFixed(1)) : null,
+        target_gap_h:   TARGET_GAP_H,
+      };
+    })
+    .filter((h) => h.convoy_count > 0)
+    .sort((a, b) => (b.avg_gap_h ?? 0) - (a.avg_gap_h ?? 0)); // widest gap first (potential issue)
+
   res.json({
     summary: buildSummary(allConvoys),
     convoys:  allConvoys,
     hauler_cycle_metrics,
+    departure_cadence,
   });
 });
 

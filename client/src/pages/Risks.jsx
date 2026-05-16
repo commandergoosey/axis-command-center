@@ -24,8 +24,9 @@ import Modal from '../components/primitives/Modal';
 import MitigationSteps from '../components/risks/MitigationSteps';
 import RiskComments from '../components/risks/RiskComments';
 import PinButton from '../components/primitives/PinButton';
-import RiskMatrix         from '../components/risks/RiskMatrix';
-import RiskExposureTrend  from '../components/risks/RiskExposureTrend';
+import RiskMatrix          from '../components/risks/RiskMatrix';
+import RiskExposureTrend   from '../components/risks/RiskExposureTrend';
+import RiskCategoryChart   from '../components/risks/RiskCategoryChart';
 
 const SEVERITY_TONE = {
   critical: 'var(--bauxite-rust)',
@@ -134,6 +135,9 @@ export default function Risks() {
         {data?.exposure_trend && (
           <RiskExposureTrend exposureTrend={data.exposure_trend} />
         )}
+
+        {/* Phase 187 — risk category weighted exposure breakdown */}
+        <RiskCategoryChart categoryBreakdown={data?.category_breakdown} />
 
         <FilterChips filters={filters} setFilters={setFilters} />
 

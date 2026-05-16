@@ -146,6 +146,36 @@ router.get('/', (req, res) => {
     }))
     .sort((a, b) => b.trips - a.trips);
 
+  // Phase 188 — SLA attainment heatmap (day-of-week × hauler).
+  // Groups southbound trips (laden runs, tonnage > 0) by hauler_id and
+  // day-of-week (Mon=0…Sun=6, same convention as delayHeatmap). For each
+  // cell: trip count + on-time rate (delay_min === 0). Uses the full TRIPS
+  // set (not the display-capped `filtered`) so the heatmap reflects total
+  // operating history regardless of page filters.
+  const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const haulerIdsSorted = [...new Set(TRIPS.map((t) => t.hauler_id))].sort();
+  const slaGrid = {};
+  haulerIdsSorted.forEach((hid) => {
+    slaGrid[hid] = Array.from({ length: 7 }, (_, dow) => ({ dow, trips: 0, on_time: 0 }));
+  });
+  TRIPS.filter((t) => t.tonnage_t > 0).forEach((t) => {
+    const dow = (new Date(t.departed_at).getUTCDay() + 6) % 7;
+    if (slaGrid[t.hauler_id]?.[dow]) {
+      slaGrid[t.hauler_id][dow].trips++;
+      if ((t.delay_min ?? 0) === 0) slaGrid[t.hauler_id][dow].on_time++;
+    }
+  });
+  const sla_heatmap = haulerIdsSorted.map((hid) => ({
+    hauler_id:      hid,
+    hauler_display: haulersById[hid] ?? hid,
+    days: slaGrid[hid].map((cell) => ({
+      dow:          cell.dow,
+      label:        DOW_LABELS[cell.dow],
+      trips:        cell.trips,
+      on_time_pct:  cell.trips > 0 ? Number(((cell.on_time / cell.trips) * 100).toFixed(0)) : null,
+    })),
+  }));
+
   res.json({
     count: liveTrips.length + filtered.length,
     hauler_id: haulerId,
@@ -154,6 +184,7 @@ router.get('/', (req, res) => {
     delay_heatmap: delayHeatmap(filtered),
     cost_trend,
     hauler_summary,
+    sla_heatmap,
   });
 });
 

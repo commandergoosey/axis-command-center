@@ -23,6 +23,7 @@ import ConvoyETABoard       from '../components/convoys/ConvoyETABoard';
 import ConvoyTable          from '../components/convoys/ConvoyTable';
 import ConvoyDetail         from '../components/convoys/ConvoyDetail';
 import ConvoyCycleMetrics   from '../components/convoys/ConvoyCycleMetrics';
+import ConvoyCadenceChart   from '../components/convoys/ConvoyCadenceChart';
 import IntelligencePanel    from '../components/intelligence/IntelligencePanel';
 
 const PHASE_OPTIONS = [
@@ -531,6 +532,9 @@ export default function Convoys() {
         {data?.hauler_cycle_metrics?.length > 0 && (
           <ConvoyCycleMetrics haulerCycleMetrics={data.hauler_cycle_metrics} />
         )}
+
+        {/* Phase 184 — inter-departure gap (cadence) per hauler */}
+        <ConvoyCadenceChart departureCadence={data?.departure_cadence} />
 
         <IntelligencePanel page="convoys" />
       </div>

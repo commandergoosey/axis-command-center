@@ -80,7 +80,29 @@ router.get('/', requireAuth, (_req, res) => {
     price_history.push({ week_of: weekLabel, price_ghs_per_litre, burn_usd_per_tonne });
   }
 
-  res.json({ ...base, actual_burns, burn_ranking, price_history });
+  // Phase 186 — diesel tariff sensitivity scenarios. Shows the modelled
+  // impact on monthly corridor EBITDA for diesel price moves of ±5%…±15%.
+  // Fuel cost share ≈ 44% of total operating cost per trip (from the cost
+  // stack: fuel ~$140 of ~$320 per trip). Monthly tonnes derived from the
+  // base revenue at the $24/t tariff. MODELLED — illustrative only.
+  const { PNL_MTD } = require('../mock/financials');
+  const FUEL_COST_SHARE = 0.44;            // diesel fraction of operating costs
+  const MONTHLY_TONNES  = Math.round(PNL_MTD.revenue_usd / 24); // ≈ 44k t
+  const sensitivity_scenarios = [-15, -10, -5, 0, 5, 10, 15].map((pct) => {
+    const delta_fuel_usd_per_tonne = Number((corridorAvg * pct / 100).toFixed(2));
+    // Change in monthly fuel spend (not passed through — haulers absorb it per contract)
+    const delta_ebitda_usd = Math.round(-delta_fuel_usd_per_tonne * MONTHLY_TONNES * FUEL_COST_SHARE);
+    return {
+      pct_change:              pct,
+      label:                   pct === 0 ? 'Base' : `${pct > 0 ? '+' : ''}${pct}%`,
+      delta_fuel_usd_per_tonne,
+      delta_ebitda_usd,
+      is_base:                 pct === 0,
+      modelled:                true,
+    };
+  });
+
+  res.json({ ...base, actual_burns, burn_ranking, price_history, sensitivity_scenarios });
 });
 
 module.exports = router;

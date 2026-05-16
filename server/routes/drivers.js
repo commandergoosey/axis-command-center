@@ -47,10 +47,54 @@ function withOverrides(drivers) {
 
 router.get('/', (req, res) => {
   const rows = withOverrides(scoped(req));
+
+  // Phase 185 — licence expiry pipeline. Buckets all visible drivers by
+  // months until licence expiry and PSV endorsement expiry so ops can see
+  // the upcoming compliance cliff without opening each driver drawer.
+  const LICENCE_BUCKETS = [
+    { key: 'critical', label: '≤ 2 mo',  min: -Infinity, max: 2  },
+    { key: 'warning',  label: '3–6 mo',  min: 3,         max: 6  },
+    { key: 'watch',    label: '7–12 mo', min: 7,         max: 12 },
+    { key: 'clear',    label: '12+ mo',  min: 13,        max: Infinity },
+  ];
+  const licenceCounts = Object.fromEntries(LICENCE_BUCKETS.map((b) => [b.key, 0]));
+  rows.forEach((d) => {
+    const months = d.licence_expiry_months ?? 999;
+    const bucket = LICENCE_BUCKETS.find((b) => months >= b.min && months <= b.max);
+    if (bucket) licenceCounts[bucket.key]++;
+  });
+  const psv_expiring_30d = rows.filter((d) => (d.psv_expiry_days ?? 999) <= 30).length;
+  const psv_expiring_60d = rows.filter((d) => (d.psv_expiry_days ?? 999) <= 60).length;
+
+  // Per-hauler: group counts by hauler_id for per-hauler drill-down.
+  const haulerLicenceMap = {};
+  rows.forEach((d) => {
+    if (!haulerLicenceMap[d.hauler_id]) {
+      haulerLicenceMap[d.hauler_id] = {
+        hauler_id: d.hauler_id,
+        hauler_display: d.hauler_display ?? d.hauler_id,
+        critical: 0, warning: 0, watch: 0, clear: 0, total: 0,
+      };
+    }
+    const h = haulerLicenceMap[d.hauler_id];
+    h.total++;
+    const months = d.licence_expiry_months ?? 999;
+    const bucket = LICENCE_BUCKETS.find((b) => months >= b.min && months <= b.max);
+    if (bucket) h[bucket.key]++;
+  });
+
+  const licence_pipeline = {
+    buckets: LICENCE_BUCKETS.map((b) => ({ key: b.key, label: b.label, count: licenceCounts[b.key] })),
+    psv_expiring_30d,
+    psv_expiring_60d,
+    by_hauler: Object.values(haulerLicenceMap).sort((a, b) => b.critical - a.critical || b.warning - a.warning),
+  };
+
   res.json({
     generated_at: new Date().toISOString(),
     total: rows.length,
     drivers: rows,
+    licence_pipeline,
   });
 });
 

@@ -16,6 +16,7 @@ import Button from '../components/primitives/Button';
 import StatusBadge from '../components/primitives/StatusBadge';
 import DriverDetail             from '../components/drivers/DriverDetail';
 import DriverHoursDistribution  from '../components/drivers/DriverHoursDistribution';
+import LicenceExpiryPipeline    from '../components/drivers/LicenceExpiryPipeline';
 import IntelligencePanel        from '../components/intelligence/IntelligencePanel';
 
 const REST_LABEL = {
@@ -152,6 +153,13 @@ export default function Drivers() {
       {drivers.length > 0 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <DriverHoursDistribution drivers={drivers} />
+        </div>
+      )}
+
+      {/* Phase 185 — licence expiry pipeline */}
+      {roster.data?.licence_pipeline && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <LicenceExpiryPipeline licencePipeline={roster.data.licence_pipeline} />
         </div>
       )}
 
