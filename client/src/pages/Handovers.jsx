@@ -20,6 +20,7 @@ import { Clock, Trash2, ChevronDown, ScrollText, PenLine } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
+import HandoverActivityChart from '../components/handovers/HandoverActivityChart';
 
 /* ── Role display ────────────────────────────────────────────────── */
 
@@ -229,6 +230,9 @@ export default function Handovers() {
             warn={stale}
           />
         </div>
+
+        {/* Phase 181 — handover posting frequency (8-week) */}
+        <HandoverActivityChart notes={notes} />
 
         {/* ── Composer ──────────────────────────────────────────── */}
         {canWrite && (

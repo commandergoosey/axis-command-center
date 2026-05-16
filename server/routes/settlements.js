@@ -171,6 +171,37 @@ router.get('/', requireAuth, (req, res) => {
     };
   });
 
+  // Phase 182 — per-hauler settlement share: invoiced, paid, outstanding, paid %.
+  // Uses the full unfiltered allRows set (all haulers / all periods) for a
+  // corridor-wide breakdown that doesn't shift with role or period filters.
+  const haulerBreakdownMap = {};
+  allRows.forEach((r) => {
+    if (!haulerBreakdownMap[r.hauler_id]) {
+      haulerBreakdownMap[r.hauler_id] = {
+        hauler_id:       r.hauler_id,
+        hauler_display:  haulerIndex[r.hauler_id] ?? r.hauler_id,
+        invoiced_usd:    0,
+        paid_usd:        0,
+        outstanding_usd: 0,
+      };
+    }
+    const h = haulerBreakdownMap[r.hauler_id];
+    h.invoiced_usd += r.net_usd ?? 0;
+    if (r.status === 'paid') h.paid_usd += r.net_usd ?? 0;
+    else h.outstanding_usd += r.net_usd ?? 0;
+  });
+  const hauler_breakdown = Object.values(haulerBreakdownMap)
+    .map((h) => ({
+      ...h,
+      invoiced_usd:    Math.round(h.invoiced_usd),
+      paid_usd:        Math.round(h.paid_usd),
+      outstanding_usd: Math.round(h.outstanding_usd),
+      paid_pct:        h.invoiced_usd > 0
+        ? Number((h.paid_usd / h.invoiced_usd * 100).toFixed(1))
+        : 0,
+    }))
+    .sort((a, b) => b.invoiced_usd - a.invoiced_usd);
+
   res.json({
     generated_at: new Date().toISOString(),
     statements: rows,
@@ -179,6 +210,7 @@ router.get('/', requireAuth, (req, res) => {
     hauler_aging,
     payment_velocity,
     reconciliation,
+    hauler_breakdown,
   });
 });
 

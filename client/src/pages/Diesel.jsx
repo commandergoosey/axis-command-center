@@ -22,8 +22,9 @@ import {
 import { Fuel, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, CalendarRange } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
-import BurnEfficiencyStrip from '../components/diesel/BurnEfficiencyStrip';
-import DieselPriceTrend    from '../components/diesel/DieselPriceTrend';
+import BurnEfficiencyStrip      from '../components/diesel/BurnEfficiencyStrip';
+import HaulerBurnVarianceChart  from '../components/diesel/HaulerBurnVarianceChart';
+import DieselPriceTrend         from '../components/diesel/DieselPriceTrend';
 
 export default function Diesel() {
   const [data, setData]   = useState(null);
@@ -71,6 +72,12 @@ export default function Diesel() {
 
           {/* Phase 149 — burn efficiency ranking: worst haulers at top */}
           <BurnEfficiencyStrip
+            burnRanking={data.burn_ranking}
+            corridorAvg={data.fleet_burn?.corridor_avg_fuel_usd_per_tonne}
+          />
+
+          {/* Phase 179 — diverging variance chart: who's above/below corridor avg */}
+          <HaulerBurnVarianceChart
             burnRanking={data.burn_ranking}
             corridorAvg={data.fleet_burn?.corridor_avg_fuel_usd_per_tonne}
           />

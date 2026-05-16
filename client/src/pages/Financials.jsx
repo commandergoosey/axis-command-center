@@ -17,6 +17,7 @@ import CovenantHeadroomChart  from '../components/financials/CovenantHeadroomCha
 import CashflowForecast    from '../components/financials/CashflowForecast';
 import ReceivablesPanel    from '../components/financials/ReceivablesPanel';
 import HaulerRevenueStrip  from '../components/financials/HaulerRevenueStrip';
+import DSOTrendChart       from '../components/financials/DSOTrendChart';
 import IntelligencePanel   from '../components/intelligence/IntelligencePanel';
 
 export default function Financials() {
@@ -97,6 +98,8 @@ export default function Financials() {
         {/* Phase 156 — monthly P&L trend */}
         <PLTrendChart pnlTrend={data?.pnl_trend} />
         <CashflowForecast weeks={data?.cashflow} />
+        {/* Phase 180 — DSO 6-month trend */}
+        <DSOTrendChart dsoTrend={data?.dso_trend} />
         <IntelligencePanel page="financials" />
       </div>
     </PageShell>

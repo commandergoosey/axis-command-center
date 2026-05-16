@@ -27,6 +27,8 @@ import Button from '../components/primitives/Button';
 import SettlementAgeingStrip   from '../components/settlements/SettlementAgeingStrip';
 import PaymentVelocityChart    from '../components/settlements/PaymentVelocityChart';
 import ReconciliationGapStrip  from '../components/settlements/ReconciliationGapStrip';
+import HaulerSettlementShare   from '../components/settlements/HaulerSettlementShare';
+import IntelligencePanel       from '../components/intelligence/IntelligencePanel';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 
@@ -152,6 +154,8 @@ export default function Settlements() {
         <PaymentVelocityChart paymentVelocity={data?.payment_velocity} />
         {/* Phase 166 — expected vs invoiced reconciliation gap */}
         <ReconciliationGapStrip reconciliation={data?.reconciliation} />
+        {/* Phase 182 — per-hauler invoiced vs paid breakdown */}
+        <HaulerSettlementShare haulerBreakdown={data?.hauler_breakdown} />
         {ageing && <AgeingPanel ageing={ageing} />}
         <FilterRow
           periods={data?.periods ?? []}
@@ -178,6 +182,7 @@ export default function Settlements() {
             onResolve={setResolvingId}
           />
         )}
+        <IntelligencePanel page="settlements" />
       </div>
 
       {payingId && (

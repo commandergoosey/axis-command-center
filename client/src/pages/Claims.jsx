@@ -25,6 +25,7 @@ import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import ClaimsExposureChart   from '../components/claims/ClaimsExposureChart';
 import ClaimsMonthlyTrend   from '../components/claims/ClaimsMonthlyTrend';
+import ClaimAgeProfile      from '../components/claims/ClaimAgeProfile';
 
 const STATUS_TONE = {
   filed:        'var(--text-secondary)',
@@ -87,6 +88,8 @@ export default function Claims() {
         <ClaimsExposureChart exposureByType={data?.exposure_by_type} />
         {/* Phase 161 — 6-month claim frequency trend by category */}
         <ClaimsMonthlyTrend monthlyTrend={data?.monthly_trend} />
+        {/* Phase 183 — open claim age profile by days since filed */}
+        <ClaimAgeProfile ageProfile={data?.age_profile} />
 
         {!data ? (
           <p style={muted}>Loading…</p>

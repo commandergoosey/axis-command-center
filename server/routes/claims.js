@@ -120,12 +120,40 @@ router.get('/', requireAuth, (req, res) => {
     monthly_trend.push(entry);
   }
 
+  // Phase 183 — claim age profile: bucket non-paid claims by days since filed.
+  const OPEN_AGE_STATUSES = new Set(['filed', 'under_review', 'approved']);
+  const AGE_BUCKETS = [
+    { key: '0_30',  label: '0–30 d',  min: 0,  max: 30         },
+    { key: '31_60', label: '31–60 d', min: 31, max: 60         },
+    { key: '61_90', label: '61–90 d', min: 61, max: 90         },
+    { key: '90p',   label: '90+ d',   min: 91, max: Infinity   },
+  ];
+  const agingNow = new Date();
+  const ageCounts = Object.fromEntries(AGE_BUCKETS.map((b) => [b.key, { count: 0, exposure_usd: 0 }]));
+  rows
+    .filter((c) => OPEN_AGE_STATUSES.has(c.status))
+    .forEach((c) => {
+      const days = Math.floor((agingNow - new Date(c.filed_at)) / 86_400_000);
+      const bucket = AGE_BUCKETS.find((b) => days >= b.min && days <= b.max);
+      if (bucket) {
+        ageCounts[bucket.key].count++;
+        ageCounts[bucket.key].exposure_usd += c.claim_amount_usd ?? 0;
+      }
+    });
+  const age_profile = AGE_BUCKETS.map((b) => ({
+    bucket:       b.label,
+    count:        ageCounts[b.key].count,
+    exposure_usd: Math.round(ageCounts[b.key].exposure_usd),
+    is_overdue:   b.min >= 31,
+  }));
+
   res.json({
     generated_at: new Date().toISOString(),
     claims: rows,
     counts,
     exposure_by_type,
     monthly_trend,
+    age_profile,
   });
 });
 
