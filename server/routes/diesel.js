@@ -137,7 +137,31 @@ router.get('/', requireAuth, (_req, res) => {
     })).sort((a, b) => b.avg_l_per_100km - a.avg_l_per_100km),
   };
 
-  res.json({ ...base, actual_burns, burn_ranking, price_history, sensitivity_scenarios, fleet_efficiency });
+  // Phase 227 — 6-month corridor diesel cost trend. Combines the seeded monthly
+  // fuel price with fleet size and average burn to estimate total corridor diesel
+  // spend per month. Useful for spotting seasonal cost spikes and budget vs actual.
+  function seededMonthlyCost(n) {
+    const raw = Math.sin(n * 6823 + 61) * 116_003;
+    return raw - Math.floor(raw);
+  }
+  const FLEET_SIZE_EST = 95;           // approximate contracted truck count
+  const AVG_TRIPS_PER_TRUCK_PER_MONTH = 8;
+  const TRIP_DISTANCE_KM = 600;        // 300 km each way (laden + empty)
+  const now2 = new Date();
+  const monthly_cost_trend = [];
+  for (let m = 5; m >= 0; m--) {
+    const d = new Date(Date.UTC(now2.getUTCFullYear(), now2.getUTCMonth() - m, 1));
+    const monthKey = d.toISOString().slice(0, 7);
+    const seed     = d.getUTCFullYear() * 100 + d.getUTCMonth();
+    const priceGhs = BASE_PRICE_GHS + (seededMonthlyCost(seed) - 0.5) * PRICE_RANGE_GHS;
+    const litersPerTrip = (corridorAvgL100 / 100) * TRIP_DISTANCE_KM;
+    const totalLiters   = FLEET_SIZE_EST * AVG_TRIPS_PER_TRUCK_PER_MONTH * litersPerTrip;
+    const usdPerGhs     = 1 / (14.5 + seededMonthlyCost(seed + 50) * 1.5); // approx FX
+    const cost_usd      = Math.round(totalLiters * priceGhs * usdPerGhs * (0.92 + seededMonthlyCost(seed + 200) * 0.16));
+    monthly_cost_trend.push({ month: monthKey, cost_usd, modelled: true });
+  }
+
+  res.json({ ...base, actual_burns, burn_ranking, price_history, sensitivity_scenarios, fleet_efficiency, monthly_cost_trend });
 });
 
 module.exports = router;

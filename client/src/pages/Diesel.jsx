@@ -27,6 +27,7 @@ import HaulerBurnVarianceChart  from '../components/diesel/HaulerBurnVarianceCha
 import TariffSensitivityChart   from '../components/diesel/TariffSensitivityChart';
 import DieselPriceTrend         from '../components/diesel/DieselPriceTrend';
 import FleetEfficiencyChart     from '../components/diesel/FleetEfficiencyChart';
+import DieselMonthlyCostChart  from '../components/diesel/DieselMonthlyCostChart';
 
 export default function Diesel() {
   const [data, setData]   = useState(null);
@@ -93,6 +94,11 @@ export default function Diesel() {
           {/* Phase 207 — per-hauler L/100km fleet efficiency */}
           {data.fleet_efficiency && (
             <FleetEfficiencyChart fleetEfficiency={data.fleet_efficiency} />
+          )}
+
+          {/* Phase 227 — 6-month corridor diesel cost trend */}
+          {data.monthly_cost_trend?.length > 0 && (
+            <DieselMonthlyCostChart monthlyCostTrend={data.monthly_cost_trend} />
           )}
 
           {/* Phase 115 — actual fill events from Phase 111 fuel logs */}

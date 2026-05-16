@@ -137,6 +137,33 @@ router.get('/pipeline', requireAuth, (req, res) => {
   data.backlog_by_hauler = Object.values(backlogByHauler)
     .sort((a, b) => (b.urgent + b.high) - (a.urgent + a.high) || b.total - a.total);
 
+  // Phase 226 — coaching topic distribution. Seeded per pipeline entry so the
+  // breakdown is stable. Five topics reflect the corridor's common intervention
+  // themes. MODELLED — real topic tagging requires session form data.
+  function seededTopic(n) {
+    const raw = Math.sin(n * 4783 + 43) * 82_003;
+    return raw - Math.floor(raw);
+  }
+  const TOPICS = [
+    { key: 'driver_behavior',   label: 'Driver behaviour',    pCum: 0.28 },
+    { key: 'hos_compliance',    label: 'HOS compliance',      pCum: 0.50 },
+    { key: 'fuel_efficiency',   label: 'Fuel efficiency',     pCum: 0.66 },
+    { key: 'vehicle_check',     label: 'Vehicle inspection',  pCum: 0.82 },
+    { key: 'route_adherence',   label: 'Route adherence',     pCum: 1.00 },
+  ];
+  const topicCounts = Object.fromEntries(TOPICS.map((t) => [t.key, { ...t, count: 0 }]));
+  (data.pipeline ?? []).forEach((r, idx) => {
+    const v     = seededTopic(idx * 7 + 5);
+    const topic = TOPICS.find((t) => v <= t.pCum) ?? TOPICS[TOPICS.length - 1];
+    topicCounts[topic.key].count++;
+  });
+  data.topic_breakdown = TOPICS.map((t) => ({
+    key:      t.key,
+    label:    t.label,
+    count:    topicCounts[t.key].count,
+    modelled: true,
+  })).filter((t) => t.count > 0);
+
   res.json(data);
 });
 

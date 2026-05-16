@@ -28,6 +28,7 @@ import RiskMatrix          from '../components/risks/RiskMatrix';
 import RiskExposureTrend   from '../components/risks/RiskExposureTrend';
 import RiskCategoryChart   from '../components/risks/RiskCategoryChart';
 import RiskVelocityChart   from '../components/risks/RiskVelocityChart';
+import RiskAgeChart        from '../components/risks/RiskAgeChart';
 
 const SEVERITY_TONE = {
   critical: 'var(--bauxite-rust)',
@@ -143,6 +144,11 @@ export default function Risks() {
         {/* Phase 205 — risk velocity: opened vs closed per week */}
         {data?.velocity_trend && (
           <RiskVelocityChart velocityTrend={data.velocity_trend} />
+        )}
+
+        {/* Phase 225 — open risk age profile: flag stale register hygiene */}
+        {data?.risk_age_profile && (
+          <RiskAgeChart riskAgeProfile={data.risk_age_profile} />
         )}
 
         <FilterChips filters={filters} setFilters={setFilters} />

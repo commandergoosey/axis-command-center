@@ -24,6 +24,7 @@ import MaintenanceCostTrend           from '../components/maintenance/Maintenanc
 import RoadWorthyPipelineChart       from '../components/maintenance/RoadWorthyPipelineChart';
 import MaintenanceCostByAgeChart     from '../components/maintenance/MaintenanceCostByAgeChart';
 import IntelligencePanel             from '../components/intelligence/IntelligencePanel';
+import RepairTypeChart               from '../components/maintenance/RepairTypeChart';
 import { formatKm, formatUsd } from '../lib/format';
 
 export default function Maintenance() {
@@ -117,6 +118,10 @@ export default function Maintenance() {
           {/* Phase 204 — maintenance cost by vehicle age bracket */}
           {state.data?.cost_by_age?.length > 0 && (
             <MaintenanceCostByAgeChart costByAge={state.data.cost_by_age} />
+          )}
+          {/* Phase 224 — repair type breakdown: what's driving maintenance events */}
+          {state.data?.repair_type_breakdown?.length > 0 && (
+            <RepairTypeChart repairTypeBreakdown={state.data.repair_type_breakdown} />
           )}
           <IntelligencePanel page="maintenance" />
         </div>

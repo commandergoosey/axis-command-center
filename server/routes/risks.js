@@ -136,6 +136,29 @@ router.get('/', requireAuth, (_req, res) => {
     });
   }
 
+  // Phase 225 — risk age profile: how long open risks have been active.
+  // Buckets by days elapsed since created_at. Old open risks signal stalled
+  // mitigation; a healthy register turns over within 30 days.
+  const AGE_BUCKETS = [
+    { key: '0-7d',  label: '0–7 days',   min: 0,  max: 7  },
+    { key: '8-30d', label: '8–30 days',  min: 8,  max: 30 },
+    { key: '31-90d',label: '31–90 days', min: 31, max: 90 },
+    { key: '90d+',  label: '90+ days',   min: 91, max: Infinity },
+  ];
+  const ageCounts = Object.fromEntries(AGE_BUCKETS.map((b) => [b.key, 0]));
+  const nowAge = Date.now();
+  openRisks.forEach((r) => {
+    if (!r.created_at) return;
+    const days = Math.floor((nowAge - new Date(r.created_at).getTime()) / 86_400_000);
+    const bucket = AGE_BUCKETS.find((b) => days >= b.min && days <= b.max);
+    if (bucket) ageCounts[bucket.key]++;
+  });
+  const risk_age_profile = AGE_BUCKETS.map((b) => ({
+    key:   b.key,
+    label: b.label,
+    count: ageCounts[b.key],
+  })).filter((b) => b.count > 0);
+
   res.json({
     risks,
     counts: riskRegister.counts(),
@@ -143,6 +166,7 @@ router.get('/', requireAuth, (_req, res) => {
     exposure_trend,
     category_breakdown,
     velocity_trend,
+    risk_age_profile,
   });
 });
 

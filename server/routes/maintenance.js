@@ -192,6 +192,42 @@ router.get('/', (req, res) => {
     };
   }).filter((b) => b.count > 0);
 
+  // Phase 224 — repair type breakdown. Each truck is seeded to a primary repair
+  // category so ops can see which failure mode is driving workshop demand.
+  // Five categories: engine, brakes, tyres, electrical, bodywork.
+  // Costs are seeded per truck index using the same age-factor scaling as Phase 204.
+  function seededRepairType(n) {
+    const raw = Math.sin(n * 5503 + 47) * 88_019;
+    return raw - Math.floor(raw);
+  }
+  const REPAIR_TYPES = [
+    { key: 'engine',      label: 'Engine / drivetrain', pCum: 0.28 },
+    { key: 'brakes',      label: 'Brakes / suspension',  pCum: 0.50 },
+    { key: 'tyres',       label: 'Tyres',                pCum: 0.68 },
+    { key: 'electrical',  label: 'Electrical',           pCum: 0.84 },
+    { key: 'bodywork',    label: 'Bodywork / chassis',   pCum: 1.00 },
+  ];
+  const repairMap = Object.fromEntries(REPAIR_TYPES.map((t) => [t.key, { ...t, count: 0, cost_usd: 0 }]));
+  rows.forEach((t, i) => {
+    const age       = currentYear - (t.year_of_manufacture ?? currentYear - 5);
+    const ageFactor = 0.8 + (Math.min(age, 12) / 12) * 0.5;
+    const v         = seededRepairType(i * 11 + 3);
+    const type      = REPAIR_TYPES.find((r) => v <= r.pCum) ?? REPAIR_TYPES[REPAIR_TYPES.length - 1];
+    repairMap[type.key].count++;
+    repairMap[type.key].cost_usd += Math.round((900 + seededRepairType(i * 7 + 13) * 2_600) * ageFactor);
+  });
+  const repair_type_breakdown = REPAIR_TYPES.map((t) => {
+    const d = repairMap[t.key];
+    return {
+      key:      t.key,
+      label:    t.label,
+      count:    d.count,
+      cost_usd: d.cost_usd,
+      avg_cost: d.count > 0 ? Math.round(d.cost_usd / d.count) : 0,
+      modelled: true,
+    };
+  }).filter((t) => t.count > 0);
+
   res.json({
     generated_at: new Date().toISOString(),
     counters: {
@@ -210,6 +246,7 @@ router.get('/', (req, res) => {
     cost_trend,
     road_worthy_pipeline,
     cost_by_age,
+    repair_type_breakdown,
   });
 });
 

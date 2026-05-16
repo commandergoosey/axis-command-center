@@ -16,6 +16,7 @@ import LicencePipeline          from '../components/compliance/LicencePipeline';
 import DeadlineCountdownStrip    from '../components/compliance/DeadlineCountdownStrip';
 import ComplianceHealthTrend     from '../components/compliance/ComplianceHealthTrend';
 import AxleWeeklyTrendChart      from '../components/compliance/AxleWeeklyTrendChart';
+import ViolationTypeChart        from '../components/compliance/ViolationTypeChart';
 import FilingsTracker            from '../components/reports/FilingsTracker';
 import FilingDetailDrawer from '../components/reports/FilingDetailDrawer';
 import IntelligencePanel  from '../components/intelligence/IntelligencePanel';
@@ -75,6 +76,10 @@ export default function Compliance() {
         {/* Phase 208 — 8-week axle event frequency trend */}
         {data?.axle_weekly_trend && (
           <AxleWeeklyTrendChart axleWeeklyTrend={data.axle_weekly_trend} />
+        )}
+        {/* Phase 228 — violation breakdown by type: axle holds, warnings, licence, filings */}
+        {data?.violation_by_type?.length > 0 && (
+          <ViolationTypeChart violationByType={data.violation_by_type} />
         )}
         <DeadlineCountdownStrip deadlines={data?.upcoming_deadlines} />
         <LicencePipeline items={data?.licence_expiry} onRenewed={load} />

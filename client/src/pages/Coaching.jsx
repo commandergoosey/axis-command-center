@@ -23,6 +23,7 @@ import CoachingEffectivenessCard  from '../components/coaching/CoachingEffective
 import CoachingSessionTrend      from '../components/coaching/CoachingSessionTrend';
 import CoachingBacklogChart      from '../components/coaching/CoachingBacklogChart';
 import CoachingCompletionChart   from '../components/coaching/CoachingCompletionChart';
+import CoachingTopicChart        from '../components/coaching/CoachingTopicChart';
 
 const TIER_TONE = {
   urgent:  'var(--bauxite-rust)',
@@ -107,6 +108,11 @@ export default function Coaching() {
         {/* Phase 206 — coaching session completion rate trend */}
         {data?.session_trend && (
           <CoachingCompletionChart sessionTrend={data.session_trend} />
+        )}
+
+        {/* Phase 226 — coaching topic distribution across the pipeline */}
+        {data?.topic_breakdown?.length > 0 && (
+          <CoachingTopicChart topicBreakdown={data.topic_breakdown} />
         )}
       </div>
 

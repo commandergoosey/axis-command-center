@@ -380,6 +380,21 @@ router.get('/', (_req, res) => {
     });
   }
 
+  // Phase 228 — violation breakdown by type. Aggregates all live compliance
+  // signals into four categories so ops can see at a glance whether the
+  // corridor's compliance burden is driven by axle overloads, documentation
+  // gaps, or operational patterns. Used by the Compliance page donut/bar.
+  const overdueFilingCount = mergedFilings().filter((f) => {
+    const daysRem = Math.round((new Date(f.due).getTime() - now) / 86_400_000);
+    return f.status !== 'FILED' && daysRem < 0;
+  }).length;
+  const violation_by_type = [
+    { key: 'axle_hold',      label: 'Axle holds',       count: summary.holds,          severity: 'high'   },
+    { key: 'axle_warning',   label: 'Axle warnings',    count: summary.warnings,       severity: 'medium' },
+    { key: 'licence_expiry', label: 'Licence expiring', count: licenceExpiry.length,   severity: 'medium' },
+    { key: 'filing_overdue', label: 'Filing overdue',   count: overdueFilingCount,     severity: 'high'   },
+  ].filter((v) => v.count > 0);
+
   res.json({
     generated_at: new Date().toISOString(),
     axle: {
@@ -397,6 +412,7 @@ router.get('/', (_req, res) => {
     upcoming_deadlines,
     health_score,
     axle_weekly_trend,
+    violation_by_type,
   });
 });
 
