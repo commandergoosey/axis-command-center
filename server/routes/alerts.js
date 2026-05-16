@@ -161,6 +161,30 @@ router.get('/', (req, res) => {
     }
   }
 
+  // Phase 197 — alert age profile.
+  // Buckets open alerts (NEEDS_ACTION + MONITORING) by days since opened_at
+  // so the shift supervisor can spot stale work without scanning every card.
+  const AGE_BUCKETS = [
+    { key: '0–2d',  label: '0–2 days',  min: 0,  max: 2          },
+    { key: '3–7d',  label: '3–7 days',  min: 3,  max: 7          },
+    { key: '8–14d', label: '8–14 days', min: 8,  max: 14         },
+    { key: '15+d',  label: '15+ days',  min: 15, max: Infinity   },
+  ];
+  const nowMs = Date.now();
+  const ageBuckets = AGE_BUCKETS.map((b) => ({ key: b.key, label: b.label, count: 0 }));
+  open.forEach((a) => {
+    if (!a.opened_at) return;
+    const ageDays = Math.floor((nowMs - new Date(a.opened_at).getTime()) / 86_400_000);
+    const bucketIdx = AGE_BUCKETS.findIndex((b) => ageDays >= b.min && ageDays <= b.max);
+    if (bucketIdx >= 0) ageBuckets[bucketIdx].count++;
+  });
+  const oldestDays = open.length > 0
+    ? Math.max(...open.map((a) => a.opened_at
+        ? Math.floor((nowMs - new Date(a.opened_at).getTime()) / 86_400_000)
+        : 0))
+    : 0;
+  const alert_age_profile = { buckets: ageBuckets, oldest_open_days: oldestDays };
+
   res.json({
     generated_at: new Date().toISOString(),
     summary: {
@@ -176,6 +200,7 @@ router.get('/', (req, res) => {
       auto_cleared:   autoCleared.length,
     },
     severity_trend,
+    alert_age_profile,
     alerts: rows,
     auto_cleared: autoCleared,
   });

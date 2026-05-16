@@ -90,11 +90,36 @@ router.get('/', (req, res) => {
     by_hauler: Object.values(haulerLicenceMap).sort((a, b) => b.critical - a.critical || b.warning - a.warning),
   };
 
+  // Phase 195 — safety score distribution histogram.
+  // Buckets all visible drivers by safety_score in 5-point bands so ops
+  // can see where the fleet sits on the score curve at a glance.
+  const SAFETY_BANDS = [
+    { band: '65–69', min: 65, max: 69 },
+    { band: '70–74', min: 70, max: 74 },
+    { band: '75–79', min: 75, max: 79 },
+    { band: '80–84', min: 80, max: 84 },
+    { band: '85–89', min: 85, max: 89 },
+    { band: '90–94', min: 90, max: 94 },
+    { band: '95–100', min: 95, max: 100 },
+  ];
+  const bandCounts = Object.fromEntries(SAFETY_BANDS.map((b) => [b.band, 0]));
+  rows.forEach((d) => {
+    const score = d.safety_score ?? 0;
+    const band = SAFETY_BANDS.find((b) => score >= b.min && score <= b.max);
+    if (band) bandCounts[band.band]++;
+  });
+  const safety_distribution = SAFETY_BANDS.map((b) => ({
+    band:  b.band,
+    count: bandCounts[b.band],
+    tone:  b.min < 75 ? 'critical' : b.min < 85 ? 'warning' : 'ok',
+  }));
+
   res.json({
     generated_at: new Date().toISOString(),
     total: rows.length,
     drivers: rows,
     licence_pipeline,
+    safety_distribution,
   });
 });
 

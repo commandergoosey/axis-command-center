@@ -134,7 +134,68 @@ router.get('/', (req, res) => {
         .filter((h) => h.avg_l_per_100km != null && h.avg_trips_per_week != null);
     } catch (_) { /* non-fatal */ }
 
-    res.json({ ...base, today_live, hauler_attainment, weekday_pattern, efficiency_benchmark });
+    // Phase 194 — per-hauler take-or-pay floor risk.
+    // Shows each hauler's MTD actual vs contracted and whether they are on
+    // track against their proportional share of the corridor take-or-pay floor.
+    let take_or_pay_risk = null;
+    if (hauler_attainment && hauler_attainment.length > 0) {
+      const annualFloor = base.contract?.annual_floor_t ?? 800_000;
+      const totalContracted = hauler_attainment.reduce((s, h) => s + (h.tonnes_contracted ?? 0), 0);
+      const now2 = new Date();
+      const dayOfMonth = now2.getUTCDate();
+      const daysInMonth = new Date(Date.UTC(now2.getUTCFullYear(), now2.getUTCMonth() + 1, 0)).getUTCDate();
+      const monthFrac = dayOfMonth / daysInMonth;
+      take_or_pay_risk = hauler_attainment.map((h) => {
+        const haulerFloorShare = totalContracted > 0 ? h.tonnes_contracted / totalContracted : 0;
+        const annualHaulerFloor = annualFloor * haulerFloorShare;
+        const mtd_floor = (annualHaulerFloor / 12) * monthFrac;
+        const actual = h.tonnes_mtd ?? 0;
+        const contracted = h.tonnes_contracted ?? 0;
+        const attainment_pct = contracted > 0 ? Math.round((actual / contracted) * 100) : 0;
+        const floor_pct = mtd_floor > 0 ? Math.round((actual / mtd_floor) * 100) : 100;
+        const shortfall_t = Math.max(0, Math.round(contracted - actual));
+        return {
+          hauler_id:         h.hauler_id,
+          display_name:      h.display_name,
+          tonnes_actual:     actual,
+          tonnes_contracted: contracted,
+          mtd_floor:         Math.round(mtd_floor),
+          attainment_pct,
+          floor_pct,
+          shortfall_t,
+          at_risk:           floor_pct < 80,
+          modelled:          true,
+        };
+      }).sort((a, b) => a.floor_pct - b.floor_pct);
+    }
+
+    // Phase 198 — weekly revenue per km corridor trend (last 12 weeks).
+    // Southbound trips only; aggregates revenue_usd by Monday week then
+    // divides by corridor_km to give a per-km revenue efficiency series.
+    const CORRIDOR_KM = base.contract?.corridor_km ?? 300;
+    const revenueByWeek = {};
+    TRIPS
+      .filter((t) => t.direction === 'southbound' && (t.revenue_usd ?? 0) > 0)
+      .forEach((t) => {
+        const d = new Date(t.departed_at ?? t.completed_at ?? 0);
+        const mon = new Date(d);
+        mon.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+        mon.setUTCHours(0, 0, 0, 0);
+        const key = mon.toISOString().slice(0, 10);
+        if (!revenueByWeek[key]) revenueByWeek[key] = 0;
+        revenueByWeek[key] += t.revenue_usd;
+      });
+    const revenue_per_km = Object.entries(revenueByWeek)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([week_of, revenue_usd]) => ({
+        week_of,
+        revenue_usd:     Math.round(revenue_usd),
+        revenue_per_km:  Number((revenue_usd / CORRIDOR_KM).toFixed(0)),
+        modelled:        true,
+      }));
+
+    res.json({ ...base, today_live, hauler_attainment, weekday_pattern, efficiency_benchmark, take_or_pay_risk, revenue_per_km });
   } catch (err) {
     console.error('[analytics]', err);
     res.status(500).json({ error: 'Analytics composition failed' });

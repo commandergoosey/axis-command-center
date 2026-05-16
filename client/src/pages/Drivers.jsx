@@ -17,6 +17,7 @@ import StatusBadge from '../components/primitives/StatusBadge';
 import DriverDetail             from '../components/drivers/DriverDetail';
 import DriverHoursDistribution  from '../components/drivers/DriverHoursDistribution';
 import LicenceExpiryPipeline    from '../components/drivers/LicenceExpiryPipeline';
+import DriverSafetyHistogram    from '../components/drivers/DriverSafetyHistogram';
 import IntelligencePanel        from '../components/intelligence/IntelligencePanel';
 
 const REST_LABEL = {
@@ -160,6 +161,13 @@ export default function Drivers() {
       {roster.data?.licence_pipeline && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <LicenceExpiryPipeline licencePipeline={roster.data.licence_pipeline} />
+        </div>
+      )}
+
+      {/* Phase 195 — safety score distribution histogram */}
+      {roster.data?.safety_distribution?.length > 0 && (
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <DriverSafetyHistogram safetyDistribution={roster.data.safety_distribution} />
         </div>
       )}
 

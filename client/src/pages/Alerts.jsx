@@ -18,6 +18,7 @@ import AlertsSummary       from '../components/alerts/AlertsSummary';
 import AlertCard           from '../components/alerts/AlertCard';
 import AutoClearedSection  from '../components/alerts/AutoClearedSection';
 import AlertSeverityTrend  from '../components/alerts/AlertSeverityTrend';
+import AlertAgeProfileChart from '../components/alerts/AlertAgeProfileChart';
 import IntelligencePanel   from '../components/intelligence/IntelligencePanel';
 
 const SEVERITY_OPTIONS = [
@@ -200,6 +201,10 @@ export default function Alerts() {
         <AlertsSummary summary={data?.summary} />
         {/* Phase 155 — 8-week severity trend */}
         <AlertSeverityTrend severityTrend={data?.severity_trend} />
+        {/* Phase 197 — open alert age profile */}
+        {data?.alert_age_profile && (
+          <AlertAgeProfileChart alertAgeProfile={data.alert_age_profile} />
+        )}
         <IntelligencePanel page="alerts" />
 
         <FilterBar

@@ -14,6 +14,7 @@ import IndexationPanel   from '../components/tariff/IndexationPanel';
 import TrendCard         from '../components/tariff/TrendCard';
 import EffectiveRateHistoryCard  from '../components/tariff/EffectiveRateHistoryCard';
 import IndexationBreakdownChart    from '../components/tariff/IndexationBreakdownChart';
+import ComponentShareChart         from '../components/tariff/ComponentShareChart';
 import TariffEscalationForecast   from '../components/tariff/TariffEscalationForecast';
 import IntelligencePanel           from '../components/intelligence/IntelligencePanel';
 
@@ -66,6 +67,11 @@ export default function Tariff() {
         {/* Phase 152 — per-component tariff breakdown chart */}
         {data?.component_history && (
           <IndexationBreakdownChart componentHistory={data.component_history} />
+        )}
+
+        {/* Phase 196 — component share trend (% of effective rate over time) */}
+        {data?.component_history?.length > 0 && (
+          <ComponentShareChart componentHistory={data.component_history} />
         )}
 
         <div style={{
