@@ -31,48 +31,80 @@ const SEV_COLOR = {
 
 const WRITE_ROLES = new Set(['axis_admin', 'axis_ops']);
 
-export default function CorridorConditions({ conditions, activeConvoys, onAdvisoryChange }) {
+/*
+ * horizontal=true  → three panels (Conditions, Advisories, Weighbridges) in a
+ *                    single-row grid; Active Convoys panel is omitted because
+ *                    Corridor.jsx renders a dedicated ConvoyStrip below.
+ * horizontal=false → original vertical stack with all four panels (used when
+ *                    the component is displayed as a narrow side column).
+ */
+export default function CorridorConditions({ conditions, activeConvoys, onAdvisoryChange, horizontal = false }) {
   const { user } = useAuth();
   const canWrite = user && WRITE_ROLES.has(user.role);
 
+  const conditionsPanel = (
+    <Panel title="Conditions">
+      <p style={{
+        margin: 0,
+        fontSize: 'var(--ts-body-sm-size)',
+        lineHeight: 'var(--ts-body-sm-lh)',
+        color: 'var(--text)',
+      }}>
+        {conditions?.weather ?? '—'}
+      </p>
+    </Panel>
+  );
+
+  const advisoriesPanel = (
+    <AdvisoriesPanel
+      advisories={conditions?.advisories ?? []}
+      canWrite={canWrite}
+      onAdvisoryChange={onAdvisoryChange}
+    />
+  );
+
+  const weighbridgesPanel = (
+    <Panel title="Weighbridges">
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {conditions?.weighbridges?.map((w) => (
+          <li key={w.id} style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+          }}>
+            <span style={{ fontSize: 'var(--ts-body-sm-size)', color: 'var(--text)', fontWeight: 'var(--fw-medium)' }}>
+              {WAYPOINT_NAMES[w.id] ?? w.id}
+            </span>
+            <span className="tabular" style={{ fontSize: 'var(--ts-body-sm-size)', color: 'var(--text-secondary)' }}>
+              {w.queue_minutes} min
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+
+  if (horizontal) {
+    return (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1.6fr 0.9fr',
+        gap: 'var(--space-4)',
+        alignItems: 'start',
+      }}>
+        {conditionsPanel}
+        {advisoriesPanel}
+        {weighbridgesPanel}
+      </div>
+    );
+  }
+
   return (
     <aside style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <Panel title="Conditions">
-        <p style={{
-          margin: 0,
-          fontSize: 'var(--ts-body-sm-size)',
-          lineHeight: 'var(--ts-body-sm-lh)',
-          color: 'var(--text)',
-        }}>
-          {conditions?.weather ?? '—'}
-        </p>
-      </Panel>
-
-      <AdvisoriesPanel
-        advisories={conditions?.advisories ?? []}
-        canWrite={canWrite}
-        onAdvisoryChange={onAdvisoryChange}
-      />
-
-      <Panel title="Weighbridges">
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {conditions?.weighbridges?.map((w) => (
-            <li key={w.id} style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-            }}>
-              <span style={{ fontSize: 'var(--ts-body-sm-size)', color: 'var(--text)', fontWeight: 'var(--fw-medium)' }}>
-                {WAYPOINT_NAMES[w.id] ?? w.id}
-              </span>
-              <span className="tabular" style={{ fontSize: 'var(--ts-body-sm-size)', color: 'var(--text-secondary)' }}>
-                {w.queue_minutes} min
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Panel>
+      {conditionsPanel}
+      {advisoriesPanel}
+      {weighbridgesPanel}
 
       <Panel title={`Active convoys · ${activeConvoys?.length ?? 0}`}>
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>

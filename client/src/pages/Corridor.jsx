@@ -66,34 +66,35 @@ export default function Corridor() {
         </div>
       )}
 
-      {/* ── Main view: schematic or map, plus the conditions side panel ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 320px',
-        gap: 'var(--space-4)',
-        alignItems: 'start',
-      }}>
-        <div>
-          {mode === 'schematic' ? (
-            <CorridorSchematic
-              waypoints={data?.waypoints}
-              segments={data?.segments}
-              lengthKm={data?.corridor?.length_km ?? 300}
-            />
-          ) : (
-            <CorridorMap
-              key={data?.waypoints?.length ?? 0}
-              waypoints={data?.waypoints}
-              convoys={data?.active_convoys}
-            />
-          )}
-        </div>
+      {/* ── Main view: schematic or map — full width ───────────────── */}
+      {mode === 'schematic' ? (
+        <CorridorSchematic
+          waypoints={data?.waypoints}
+          segments={data?.segments}
+          lengthKm={data?.corridor?.length_km ?? 300}
+        />
+      ) : (
+        <CorridorMap
+          key={data?.waypoints?.length ?? 0}
+          waypoints={data?.waypoints}
+          convoys={data?.active_convoys}
+        />
+      )}
+
+      {/* ── Conditions strip: weather · advisories · weighbridges ───── */}
+      <div style={{ marginTop: 'var(--space-4)' }}>
         <CorridorConditions
           conditions={data?.conditions}
           activeConvoys={data?.active_convoys}
           onAdvisoryChange={load}
+          horizontal
         />
       </div>
+
+      {/* ── Active convoys ───────────────────────────────────────────── */}
+      {data?.active_convoys?.length > 0 && (
+        <ConvoyStrip convoys={data.active_convoys} />
+      )}
 
       {/* ── Analytics section ─────────────────────────────────────────── */}
       <div style={{
@@ -140,5 +141,90 @@ export default function Corridor() {
         <IntelligencePanel page="corridor" />
       </div>
     </PageShell>
+  );
+}
+
+/* ── Active convoy strip ──────────────────────────────────────────────────
+ * Compact grid of convoy cards rendered below the conditions strip.
+ * Each card shows hauler, phase direction, km position, and schedule status.
+ */
+function ConvoyStrip({ convoys }) {
+  const cols = Math.min(convoys.length, 4);
+  return (
+    <div style={{ marginTop: 'var(--space-4)' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-3)',
+        marginBottom: 'var(--space-3)',
+      }}>
+        <div className="eyebrow" style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+          Active convoys · {convoys.length}
+        </div>
+        <div style={{ flex: 1, height: 1, background: 'var(--border-hairline)' }} />
+      </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+        gap: 'var(--space-3)',
+      }}>
+        {convoys.map((c) => {
+          const onSchedule = c.on_schedule;
+          const dir = c.direction === 'northbound' ? '↑ N' : '↓ S';
+          const phase = c.phase
+            ? c.phase.charAt(0).toUpperCase() + c.phase.slice(1)
+            : '—';
+          return (
+            <div key={c.id} style={{
+              background: 'var(--surface-raised)',
+              border: `1px solid ${onSchedule ? 'var(--border-hairline)' : 'var(--signal-amber)'}`,
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--space-3) var(--space-4)',
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                marginBottom: 4,
+              }}>
+                <span style={{
+                  fontSize: 'var(--ts-body-sm-size)',
+                  fontWeight: 'var(--fw-medium)',
+                  color: 'var(--text)',
+                }}>
+                  {c.id}
+                </span>
+                <span style={{
+                  fontSize: 9,
+                  letterSpacing: '0.06em',
+                  padding: '1px 6px',
+                  borderRadius: 999,
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 'var(--fw-medium)',
+                  textTransform: 'uppercase',
+                  background: onSchedule ? 'rgba(22,163,74,0.10)' : 'rgba(180,83,9,0.10)',
+                  color: onSchedule ? 'var(--signal-green)' : 'var(--signal-amber)',
+                }}>
+                  {onSchedule ? 'On time' : 'Delayed'}
+                </span>
+              </div>
+              <div style={{
+                fontSize: 'var(--ts-caption-size)',
+                color: 'var(--text-secondary)',
+                marginBottom: 2,
+              }}>
+                {c.hauler_display_name ?? c.hauler_id}
+              </div>
+              <div className="mono" style={{
+                fontSize: 'var(--ts-caption-size)',
+                color: 'var(--text-tertiary)',
+              }}>
+                {phase} · {dir} · km {c.km} · {c.trucks} trucks
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

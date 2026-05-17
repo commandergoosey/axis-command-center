@@ -29,47 +29,47 @@ const IRON     = '#6B6763';
 const CHARCOAL = '#1F1F1F';
 
 /*
- * Road-following trace of the Nyinahin → Takoradi corridor.
- * Approximates the N8/A8/N10 road network with ~32 intermediate points so the
- * Leaflet polyline follows the actual arc rather than drawing displacement lines.
+ * Actual road geometry for the Nyinahin → Takoradi corridor,
+ * sourced from OSRM (router.project-osrm.org, driving profile).
+ * 32 waypoints in [lat, lng] order for Leaflet.
  *
- * Key fix: the Dunkwa → Takoradi segment swings SW through the Tarkwa mining
- * area before turning SE to Takoradi — the straight-line version was almost
- * exactly vertical (Δlng ≈ 0.002°) and looked like a glitch.
+ * Key topographic feature: the route swings significantly west (lng ≈ -2.136)
+ * through the Tarkwa mining belt before arcing back SE toward Takoradi port.
+ * Points 20–21 are linear interpolations between OSRM returns 19 and 22.
  */
 const CORRIDOR_ROUTE = [
-  [6.599, -2.110], // Nyinahin mine gate
-  [6.585, -2.098], // Nyinahin weighbridge
-  [6.580, -2.063],
-  [6.592, -2.010],
-  [6.610, -1.953],
-  [6.628, -1.888],
-  [6.648, -1.820],
-  [6.662, -1.748],
-  [6.675, -1.683],
-  [6.688, -1.623], // Kumasi junction
-  [6.645, -1.583],
-  [6.563, -1.548],
-  [6.470, -1.512],
-  [6.383, -1.488],
-  [6.289, -1.483], // Fomena rest stop
-  [6.274, -1.473], // Bekwai weighbridge
-  [6.193, -1.506],
-  [6.103, -1.592],
-  [6.020, -1.684],
-  [5.964, -1.775], // Dunkwa rest stop
-  [5.880, -1.838], // ← road swings SW toward Tarkwa
-  [5.795, -1.900],
-  [5.700, -1.955],
-  [5.598, -1.992],
-  [5.487, -2.010],
-  [5.368, -2.007],
-  [5.248, -1.983], // Tarkwa area
-  [5.138, -1.940],
-  [5.038, -1.875],
-  [4.958, -1.824],
-  [4.905, -1.773], // Takoradi weighbridge
-  [4.889, -1.755], // Takoradi port
+  [6.599073, -2.109706], // Nyinahin mine gate
+  [6.605677, -2.003984],
+  [6.653674, -1.887975],
+  [6.660419, -1.815554],
+  [6.698376, -1.783460],
+  [6.687825, -1.623011], // Kumasi junction area
+  [6.540770, -1.670145],
+  [6.464592, -1.637065],
+  [6.344924, -1.630563],
+  [6.146299, -1.713866], // Fomena / Bekwai area
+  [6.088628, -1.782048],
+  [6.031867, -1.758502],
+  [5.964042, -1.774960], // Dunkwa area
+  [5.962234, -1.896670],
+  [5.772003, -2.100521],
+  [5.693347, -2.135650], // Tarkwa — westernmost point
+  [5.590274, -2.053872],
+  [5.568350, -2.005313],
+  [5.512441, -1.987626],
+  [5.469894, -2.007738],
+  [5.463115, -2.000633], // interpolated
+  [5.456336, -1.993528], // interpolated
+  [5.449557, -1.986423],
+  [5.368243, -2.000038],
+  [5.332371, -1.978343],
+  [5.199569, -2.029566],
+  [5.102584, -2.112336],
+  [5.009645, -2.085324],
+  [5.004763, -2.027452],
+  [4.972359, -1.987270],
+  [4.890048, -1.959336],
+  [4.888673, -1.754722], // Takoradi port
 ];
 
 // Interpolate a lat/lng position along the corridor given a km value.
