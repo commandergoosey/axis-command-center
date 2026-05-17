@@ -38,6 +38,7 @@ const settlementsRoute   = require('./routes/settlements');
 const claimsRoute        = require('./routes/claims');
 const dieselRoute        = require('./routes/diesel');
 const analyticsRoute     = require('./routes/analytics');
+const adminRoute         = require('./routes/admin');
 const { attachUser }    = require('./middleware/auth');
 
 const app = express();
@@ -131,6 +132,7 @@ app.use('/api/settlements',  settlementsRoute);
 app.use('/api/claims',       claimsRoute);
 app.use('/api/diesel',       dieselRoute);
 app.use('/api/analytics',   analyticsRoute);
+app.use('/api/admin',       adminRoute);
 
 /* ── 404 ── */
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));

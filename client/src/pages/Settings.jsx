@@ -6,7 +6,7 @@
 
 import { authFetch } from '../lib/auth';
 import { useEffect, useState, useCallback } from 'react';
-import { ShieldCheck, Server, Users, Plug, CheckCircle2, Circle } from 'lucide-react';
+import { Server, Plug, CheckCircle2, Circle } from 'lucide-react';
 
 import PageShell  from '../components/layout/PageShell';
 import EmptyState from '../components/primitives/EmptyState';
@@ -14,40 +14,8 @@ import IntelligencePanel from '../components/intelligence/IntelligencePanel';
 import AuditPanel from '../components/settings/AuditPanel';
 import BroadcastsPanel from '../components/settings/BroadcastsPanel';
 import IntegrationHealthPanel from '../components/settings/IntegrationHealthPanel';
-import UserQueueDialog from '../components/settings/UserQueueDialog';
+import UserManagementPanel from '../components/settings/UserManagementPanel';
 
-const ROLE_LABEL = {
-  axis_admin:   'AXIS Admin',
-  axis_ops:     'AXIS Ops',
-  hauler_admin: 'Hauler admin',
-  lender:       'Lender',
-};
-
-const ROLE_TONE = {
-  axis_admin:   { color: 'var(--bauxite-rust)',  border: 'rgba(139, 46, 26, 0.3)',  bg: 'rgba(139, 46, 26, 0.06)' },
-  axis_ops:     { color: 'var(--bauxite-rust)',  border: 'rgba(139, 46, 26, 0.3)',  bg: 'rgba(139, 46, 26, 0.06)' },
-  hauler_admin: { color: 'var(--signal-amber)',  border: 'rgba(217, 158, 55, 0.3)', bg: 'rgba(217, 158, 55, 0.06)' },
-  lender:       { color: 'var(--signal-green)',  border: 'rgba(46, 107, 63, 0.3)',  bg: 'rgba(46, 107, 63, 0.06)' },
-};
-
-function RoleChip({ role }) {
-  const tone = ROLE_TONE[role] ?? ROLE_TONE.axis_ops;
-  return (
-    <span className="mono" style={{
-      fontSize: 10,
-      letterSpacing: '0.08em',
-      textTransform: 'uppercase',
-      padding: '2px 8px',
-      background: tone.bg,
-      color: tone.color,
-      border: `1px solid ${tone.border}`,
-      borderRadius: 2,
-      whiteSpace: 'nowrap',
-    }}>
-      {ROLE_LABEL[role] ?? role}
-    </span>
-  );
-}
 
 function fmtSync(iso) {
   if (!iso) return '—';
@@ -105,7 +73,7 @@ export default function Settings() {
     <PageShell
       eyebrow="Platform"
       title="Settings"
-      description="Platform posture, user directory, and hauler integration roster. Credential rotation, role edits, and audit history land with Phase 11 (signed JWT + identity provider)."
+      description="Platform posture, user directory, and hauler integration roster. Axis admin only."
     >
       {error && (
         <div style={bannerErrorStyle}>Settings feed unavailable — {error}</div>
@@ -113,7 +81,7 @@ export default function Settings() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <SystemPanel system={data?.system} />
-        <UsersPanel  users={data?.users ?? []} />
+        <UserManagementPanel users={data?.users ?? []} onRefresh={load} />
         <BroadcastsPanel />
         <IntegrationsPanel integrations={data?.integrations ?? []} />
         <IntegrationHealthPanel haulers={data?.integrations ?? []} />
@@ -148,61 +116,6 @@ function SystemPanel({ system }) {
   );
 }
 
-function UsersPanel({ users }) {
-  // Phase 56 — clicking any non-lender row opens that user's queue with
-  // a bulk-reassign control. Lenders are read-only (no action items),
-  // so their rows stay non-interactive.
-  const [picked, setPicked] = useState(null);
-  return (
-    <Section icon={Users} title="User directory" count={users.length}>
-      {users.length === 0 ? (
-        <Skeleton rows={3} />
-      ) : (
-        <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-          {users.map((u) => {
-            const interactive = u.role !== 'lender';
-            return (
-              <li
-                key={u.id}
-                onClick={interactive ? () => setPicked(u) : undefined}
-                style={{
-                  ...rowGridStyle(['minmax(0, 1.4fr)', 'minmax(0, 1.2fr)', 'minmax(0, 1fr)', 'auto']),
-                  cursor: interactive ? 'pointer' : 'default',
-                  transition: 'background 100ms ease',
-                }}
-                onMouseEnter={interactive ? (e) => { e.currentTarget.style.background = 'var(--accent-tint)'; } : undefined}
-                onMouseLeave={interactive ? (e) => { e.currentTarget.style.background = 'transparent'; } : undefined}
-                title={interactive ? 'Open queue · bulk reassign' : 'Lender — no action items to manage'}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 'var(--ts-body-sm-size)', color: 'var(--text)' }}>
-                    {u.display_name}
-                  </div>
-                  <div style={{ fontSize: 'var(--ts-caption-size)', color: 'var(--text-tertiary)' }}>
-                    {u.email}
-                  </div>
-                </div>
-                <span style={{ fontSize: 'var(--ts-body-sm-size)', color: 'var(--text-secondary)' }}>
-                  {u.organisation}
-                </span>
-                <span className="mono" style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                  {u.hauler_id ?? '—'}
-                </span>
-                <RoleChip role={u.role} />
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      <UserQueueDialog
-        open={Boolean(picked)}
-        user={picked}
-        onClose={() => setPicked(null)}
-      />
-    </Section>
-  );
-}
 
 function IntegrationsPanel({ integrations }) {
   const liveCount = integrations.filter((i) => i.live).length;

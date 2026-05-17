@@ -3,13 +3,11 @@
 /*
  * GET /api/settings — axis_admin-only platform posture.
  *
- *   system       — product version, uptime, demo vs live mode, auth stats.
- *   users        — full user directory (no passwords).
+ *   system       — product version, uptime, live vs demo mode, auth stats.
+ *   users        — full user directory (no passwords). Use /api/admin/users
+ *                  for write operations (LP-2).
  *   integrations — per-hauler integration roster (adapter, last sync,
  *                   error count, credentials present, live status).
- *
- * This is a read-only surface in v1. Credential rotation, role edits, and
- * audit history land after Phase 11 (signed JWT + identity provider).
  */
 
 const express = require('express');
@@ -56,6 +54,7 @@ router.get('/', requireRole('axis_admin'), (_req, res) => {
       role:         u.role,
       organisation: u.organisation,
       hauler_id:    u.hauler_id,
+      active:       Boolean(u.active),
     })),
     integrations,
   });
