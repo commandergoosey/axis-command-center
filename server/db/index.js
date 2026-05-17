@@ -31,6 +31,46 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
 db.exec(`
+  /* ── Auth ──────────────────────────────────────────────────────────────
+   * users    — all platform accounts; password_hash is bcrypt.
+   * sessions — opaque 32-byte hex tokens, persisted so they survive restarts.
+   */
+  CREATE TABLE IF NOT EXISTS users (
+    id            TEXT PRIMARY KEY,
+    email         TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    display_name  TEXT NOT NULL,
+    role          TEXT NOT NULL CHECK(role IN ('axis_admin','axis_ops','hauler_admin','lender')),
+    hauler_id     TEXT,
+    organisation  TEXT,
+    active        INTEGER NOT NULL DEFAULT 1,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token       TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    issued_at   TEXT NOT NULL,
+    expires_at  TEXT NOT NULL,
+    ip          TEXT,
+    user_agent  TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sessions_user    ON sessions (user_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions (expires_at);
+
+  /* ── Password reset tokens ──────────────────────────────────────────── */
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    token       TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at  TEXT NOT NULL,
+    expires_at  TEXT NOT NULL,
+    used        INTEGER NOT NULL DEFAULT 0
+  );
+
   CREATE TABLE IF NOT EXISTS alert_state (
     alert_id             TEXT PRIMARY KEY,
     status_override      TEXT,
