@@ -23,10 +23,54 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-const RUST   = '#A23E23';
-const AMBER  = '#B45309';
-const IRON   = '#6B6763';
+const RUST     = '#A23E23';
+const AMBER    = '#B45309';
+const IRON     = '#6B6763';
 const CHARCOAL = '#1F1F1F';
+
+/*
+ * Road-following trace of the Nyinahin → Takoradi corridor.
+ * Approximates the N8/A8/N10 road network with ~32 intermediate points so the
+ * Leaflet polyline follows the actual arc rather than drawing displacement lines.
+ *
+ * Key fix: the Dunkwa → Takoradi segment swings SW through the Tarkwa mining
+ * area before turning SE to Takoradi — the straight-line version was almost
+ * exactly vertical (Δlng ≈ 0.002°) and looked like a glitch.
+ */
+const CORRIDOR_ROUTE = [
+  [6.599, -2.110], // Nyinahin mine gate
+  [6.585, -2.098], // Nyinahin weighbridge
+  [6.580, -2.063],
+  [6.592, -2.010],
+  [6.610, -1.953],
+  [6.628, -1.888],
+  [6.648, -1.820],
+  [6.662, -1.748],
+  [6.675, -1.683],
+  [6.688, -1.623], // Kumasi junction
+  [6.645, -1.583],
+  [6.563, -1.548],
+  [6.470, -1.512],
+  [6.383, -1.488],
+  [6.289, -1.483], // Fomena rest stop
+  [6.274, -1.473], // Bekwai weighbridge
+  [6.193, -1.506],
+  [6.103, -1.592],
+  [6.020, -1.684],
+  [5.964, -1.775], // Dunkwa rest stop
+  [5.880, -1.838], // ← road swings SW toward Tarkwa
+  [5.795, -1.900],
+  [5.700, -1.955],
+  [5.598, -1.992],
+  [5.487, -2.010],
+  [5.368, -2.007],
+  [5.248, -1.983], // Tarkwa area
+  [5.138, -1.940],
+  [5.038, -1.875],
+  [4.958, -1.824],
+  [4.905, -1.773], // Takoradi weighbridge
+  [4.889, -1.755], // Takoradi port
+];
 
 // Interpolate a lat/lng position along the corridor given a km value.
 function interpolate(km, waypoints) {
@@ -118,9 +162,8 @@ export default function CorridorMap({ waypoints, convoys }) {
     if (layersRef.current.route) map.removeLayer(layersRef.current.route);
     layersRef.current.waypoints = [];
 
-    // Route polyline
-    const latLngs = waypoints.map((w) => [w.lat, w.lng]);
-    const route = L.polyline(latLngs, {
+    // Route polyline — use the road-following CORRIDOR_ROUTE, not waypoint straight lines
+    const route = L.polyline(CORRIDOR_ROUTE, {
       color: RUST, weight: 3, opacity: 0.85,
       dashArray: null, lineJoin: 'round', lineCap: 'round',
     }).addTo(map);

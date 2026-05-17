@@ -66,6 +66,7 @@ export default function Corridor() {
         </div>
       )}
 
+      {/* ── Main view: schematic or map, plus the conditions side panel ── */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 320px',
@@ -90,28 +91,44 @@ export default function Corridor() {
         />
       </div>
 
-      <div style={{ marginTop: 'var(--space-4)' }}>
-        <HealthTrendChart history={data?.health_history} />
+      {/* ── Analytics section ─────────────────────────────────────────── */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-3)',
+        marginTop: 'var(--space-5)',
+        marginBottom: 'var(--space-4)',
+      }}>
+        <div className="eyebrow" style={{ color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+          Corridor analytics
+        </div>
+        <div style={{ flex: 1, height: 1, background: 'var(--border-hairline)' }} />
       </div>
 
-      {/* Phase 191 — per-segment laden/empty utilisation */}
-      {data?.segment_util?.length > 0 && (
-        <div style={{ marginTop: 'var(--space-4)' }}>
-          <SegmentUtilChart segmentUtil={data.segment_util} />
+      {/* Health trend — full width */}
+      <HealthTrendChart history={data?.health_history} />
+
+      {/* Phase 191 + Phase 215 — segment utilisation and waypoint dwell, side by side */}
+      {(data?.segment_util?.length > 0 || data?.waypoint_dwell?.length > 0) && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+          gap: 'var(--space-4)',
+          marginTop: 'var(--space-4)',
+        }}>
+          {data?.segment_util?.length > 0 && (
+            <SegmentUtilChart segmentUtil={data.segment_util} />
+          )}
+          {data?.waypoint_dwell?.length > 0 && (
+            <WaypointDwellChart waypointDwell={data.waypoint_dwell} />
+          )}
         </div>
       )}
 
-      {/* Phase 172 — 4-week corridor throughput forecast */}
+      {/* Phase 172 — 4-week corridor throughput forecast — full width */}
       {data?.throughput_forecast?.length > 0 && (
         <div style={{ marginTop: 'var(--space-4)' }}>
           <ThroughputForecast throughputForecast={data.throughput_forecast} />
-        </div>
-      )}
-
-      {/* Phase 215 — avg dwell time per waypoint (weighbridges, rest stops, junction) */}
-      {data?.waypoint_dwell?.length > 0 && (
-        <div style={{ marginTop: 'var(--space-4)' }}>
-          <WaypointDwellChart waypointDwell={data.waypoint_dwell} />
         </div>
       )}
 
