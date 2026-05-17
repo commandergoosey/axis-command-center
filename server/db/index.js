@@ -134,6 +134,41 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_fleet_drivers_hauler  ON fleet_drivers (hauler_id, archived);
   CREATE INDEX IF NOT EXISTS idx_fleet_drivers_rig     ON fleet_drivers (assigned_rig_id) WHERE assigned_rig_id IS NOT NULL;
 
+  /* ── Haulers ────────────────────────────────────────────────────────────────
+   * Single source of truth for every onboarded hauler. Seeded from
+   * mock/haulers.js on first boot (same pattern as fleet_trucks / fleet_drivers).
+   * Supersedes hauler_records + hauler_field_overrides from Phases 109/128.
+   * deactivated = 1 means the hauler is suspended; excluded from normal reads.
+   */
+  CREATE TABLE IF NOT EXISTS haulers (
+    id                  TEXT PRIMARY KEY,
+    display_name        TEXT NOT NULL,
+    onboarded_date      TEXT NOT NULL,
+    status              TEXT NOT NULL DEFAULT 'pending',
+    integration_type    TEXT NOT NULL DEFAULT 'manual',
+    integration_adapter TEXT,
+    last_sync           TEXT,
+    error_count_24h     INTEGER,
+    contracted_trucks   INTEGER NOT NULL DEFAULT 0,
+    active_trucks       INTEGER NOT NULL DEFAULT 0,
+    on_time_pct         REAL DEFAULT 0,
+    sla_attainment_pct  REAL DEFAULT 0,
+    safety_score        INTEGER DEFAULT 0,
+    run_rate            REAL DEFAULT 0,
+    contact_name        TEXT,
+    contact_email       TEXT,
+    contract_share_pct  REAL,
+    planned_start_date  TEXT,
+    activated_at        TEXT,
+    deactivated         INTEGER NOT NULL DEFAULT 0,
+    deactivated_at      TEXT,
+    created_at          TEXT NOT NULL,
+    updated_at          TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_haulers_status      ON haulers (status, deactivated);
+  CREATE INDEX IF NOT EXISTS idx_haulers_deactivated ON haulers (deactivated);
+
   CREATE TABLE IF NOT EXISTS alert_state (
     alert_id             TEXT PRIMARY KEY,
     status_override      TEXT,

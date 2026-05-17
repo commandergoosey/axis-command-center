@@ -15,6 +15,7 @@ import AuditPanel from '../components/settings/AuditPanel';
 import BroadcastsPanel from '../components/settings/BroadcastsPanel';
 import IntegrationHealthPanel from '../components/settings/IntegrationHealthPanel';
 import UserManagementPanel from '../components/settings/UserManagementPanel';
+import HaulerManagementPanel from '../components/settings/HaulerManagementPanel';
 
 
 function fmtSync(iso) {
@@ -82,6 +83,7 @@ export default function Settings() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <SystemPanel system={data?.system} />
         <UserManagementPanel users={data?.users ?? []} onRefresh={load} />
+        <HaulerManagementPanel />
         <BroadcastsPanel />
         <IntegrationsPanel integrations={data?.integrations ?? []} />
         <IntegrationHealthPanel haulers={data?.integrations ?? []} />

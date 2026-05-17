@@ -14,7 +14,6 @@ const express = require('express');
 const router = express.Router();
 
 const roster = require('../state/roster');
-const rosterStore = require('../state/rosterStore');
 const onboardingChecklist = require('../state/onboardingChecklist');
 const integrationStore = require('../state/integrationStore');
 const integrationSyncLog = require('../state/integrationSyncLog');
@@ -31,8 +30,8 @@ const licenceState  = require('../state/licenceState');
 const haulerContacts = require('../state/haulerContacts');
 const convoyState   = require('../state/convoyState');
 
-const { FLEET }    = require('../mock/fleet');
-const { DRIVERS }  = require('../mock/drivers');
+const fleetStore   = require('../state/fleetStore');
+const driverStore  = require('../state/driverStore');
 const { TRIPS }    = require('../mock/trips');
 const { ALERTS }   = require('../mock/alerts');
 const { LICENCE_EXPIRY } = require('../mock/compliance');
@@ -67,11 +66,11 @@ router.get('/', (_req, res) => {
   // percentage of the total contracted corridor fleet.
   const totalContracted = agg.fleet.contracted_trucks || 1; // guard /0
 
-  // Phase 193 — fleet uptime by hauler. Groups FLEET by hauler_id and
+  // Phase 193 — fleet uptime by hauler. Groups fleet trucks by hauler_id and
   // counts active + in_transit as "operational" vs idle + garage as
   // "non-operational". Uptime % is a real-time capacity read per hauler.
   const fleetByHauler = {};
-  FLEET.forEach((t) => {
+  fleetStore.list().forEach((t) => {
     if (!fleetByHauler[t.hauler_id]) {
       fleetByHauler[t.hauler_id] = { operational: 0, idle: 0, garage: 0, total: 0 };
     }
@@ -540,10 +539,11 @@ router.post('/:id/integration/probe', requireRole(...WRITE_ROLES), async (req, r
     const { csv_text, password, ...safeCreds } = req.body ?? {};
     integrationStore.setCreds(h.id, { ...safeCreds, stored_at: new Date().toISOString() });
     integrationStore.setProbe(h.id, result);
-    // Reflect the probe in the hauler record — operator sees the connection
-    // transition from degraded/pending to live without a page reload.
-    h.integration.last_sync      = result.probed_at;
-    h.integration.error_count_24h = result.ok ? 0 : (h.integration.error_count_24h ?? 0) + 1;
+    // Persist the probe result to DB so the connection state survives a restart.
+    roster.update(h.id, {
+      last_sync:       result.probed_at,
+      error_count_24h: result.ok ? 0 : (h.integration.error_count_24h ?? 0) + 1,
+    });
     writeAudit({
       req,
       entity_type: 'integration',
@@ -575,7 +575,7 @@ router.post('/:id/integration/csv', requireRole(...WRITE_ROLES), async (req, res
       return res.status(400).json({ error: 'No valid rows parsed', errors });
     }
     integrationStore.setCsv(h.id, rows);
-    h.integration.last_sync = new Date().toISOString();
+    roster.update(h.id, { last_sync: new Date().toISOString() });
     writeAudit({
       req,
       entity_type: 'integration',
@@ -654,8 +654,6 @@ router.post('/', requireRole(...OPS_ROLES), (req, res) => {
     _persisted:  true,
   };
 
-  // Persist to DB first, then add to in-memory roster.
-  rosterStore.add(created);
   roster.add(created);
 
   writeAudit({
@@ -679,9 +677,6 @@ router.post('/', requireRole(...OPS_ROLES), (req, res) => {
 router.patch('/:id', requireRole(...OPS_ROLES), (req, res) => {
   const h = roster.find(req.params.id);
   if (!h) return res.status(404).json({ error: 'Hauler not found' });
-  if (!h._persisted) {
-    return res.status(400).json({ error: 'Mock haulers cannot be edited via API' });
-  }
 
   const {
     display_name, contracted_trucks,
@@ -696,15 +691,14 @@ router.patch('/:id', requireRole(...OPS_ROLES), (req, res) => {
   }
 
   const fields = {};
-  if (display_name       != null) fields.display_name       = display_name.trim();
-  if (contracted_trucks  != null) fields.contracted_trucks  = Number(contracted_trucks);
-  if ('contact_name'        in (req.body || {})) fields.contact_name       = contact_name?.trim()  || null;
-  if ('contact_email'       in (req.body || {})) fields.contact_email      = contact_email?.trim() || null;
-  if ('contract_share_pct'  in (req.body || {})) fields.contract_share_pct = contract_share_pct != null ? Number(contract_share_pct) : null;
-  if ('planned_start_date'  in (req.body || {})) fields.planned_start_date = planned_start_date || null;
+  if (display_name      != null) fields.display_name      = display_name.trim();
+  if (contracted_trucks != null) fields.contracted_trucks = Number(contracted_trucks);
+  if ('contact_name'       in (req.body || {})) fields.contact_name       = contact_name?.trim()  || null;
+  if ('contact_email'      in (req.body || {})) fields.contact_email      = contact_email?.trim() || null;
+  if ('contract_share_pct' in (req.body || {})) fields.contract_share_pct = contract_share_pct != null ? Number(contract_share_pct) : null;
+  if ('planned_start_date' in (req.body || {})) fields.planned_start_date = planned_start_date || null;
 
-  rosterStore.update(h.id, fields);
-  roster.update(h.id, fields);
+  const updated = roster.update(h.id, fields);
 
   writeAudit({
     req,
@@ -714,7 +708,7 @@ router.patch('/:id', requireRole(...OPS_ROLES), (req, res) => {
     summary:     `Updated ${h.display_name} — ${Object.keys(fields).join(', ')}`,
     payload:     fields,
   });
-  res.json({ hauler: roster.find(h.id) });
+  res.json({ hauler: updated });
 });
 
 // ── Phase 109: Checklist step toggle ─────────────────────────────────────────
@@ -754,9 +748,6 @@ router.post('/:id/activate', requireRole('axis_admin'), (req, res) => {
   if (h.status === 'active') {
     return res.status(400).json({ error: 'Hauler is already active' });
   }
-  if (!h._persisted) {
-    return res.status(400).json({ error: 'Mock haulers cannot be activated via API' });
-  }
   if (!onboardingChecklist.allComplete(h.id)) {
     const cl = onboardingChecklist.getChecklist(h.id);
     const missing = cl.filter((s) => !s.done).map((s) => s.label);
@@ -767,8 +758,7 @@ router.post('/:id/activate', requireRole('axis_admin'), (req, res) => {
   }
 
   const activatedAt = new Date().toISOString();
-  rosterStore.update(h.id, { status: 'active', activated_at: activatedAt });
-  roster.update(h.id,   { status: 'active', activated_at: activatedAt });
+  roster.update(h.id, { status: 'active', activated_at: activatedAt });
 
   writeAudit({
     req,
@@ -790,7 +780,7 @@ function hashOf(s) {
 }
 
 function buildFleetBreakdown(haulerId) {
-  const rigs = FLEET.filter((t) => t.hauler_id === haulerId);
+  const rigs = fleetStore.list({ hauler_id: haulerId });
   const status = { in_transit: 0, at_origin: 0, at_destination: 0, garage: 0 };
   const flags  = { critical: 0, service_due: 0, road_worthy_30d: 0, healthy: 0 };
   for (const r of rigs) {
@@ -805,7 +795,7 @@ function buildFleetBreakdown(haulerId) {
 }
 
 function buildDriverRoster(haulerId) {
-  const drivers = DRIVERS.filter((d) => d.hauler_id === haulerId);
+  const drivers = driverStore.list({ hauler_id: haulerId });
   return {
     total:    drivers.length,
     primary:  drivers.filter((d) => d.assigned_rig_id).length,
