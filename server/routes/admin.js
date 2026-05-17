@@ -2,20 +2,35 @@
 
 /*
  * LP-2 — Admin user-management endpoints. All routes require axis_admin.
+ * LP-3 — Fleet and driver CRUD endpoints added below.
  *
- * GET    /api/admin/users                  — full user list (inc. inactive)
- * POST   /api/admin/users                  — create new user
- * PATCH  /api/admin/users/:id              — edit display_name / role / org / hauler_id
- * POST   /api/admin/users/:id/set-password — admin force-sets any user's password
- * POST   /api/admin/users/:id/deactivate   — suspend account (blocks login)
- * POST   /api/admin/users/:id/reactivate   — restore account
+ * GET    /api/admin/users                     — full user list (inc. inactive)
+ * POST   /api/admin/users                     — create new user
+ * PATCH  /api/admin/users/:id                 — edit display_name / role / org / hauler_id
+ * POST   /api/admin/users/:id/set-password    — admin force-sets any user's password
+ * POST   /api/admin/users/:id/deactivate      — suspend account (blocks login)
+ * POST   /api/admin/users/:id/reactivate      — restore account
+ *
+ * GET    /api/admin/fleet                     — list all non-archived trucks
+ * POST   /api/admin/fleet                     — create truck
+ * PATCH  /api/admin/fleet/:id                 — update truck fields
+ * POST   /api/admin/fleet/:id/archive         — soft-delete truck
+ * POST   /api/admin/fleet/:id/unarchive       — restore truck
+ *
+ * GET    /api/admin/drivers                   — list all non-archived drivers
+ * POST   /api/admin/drivers                   — create driver
+ * PATCH  /api/admin/drivers/:id               — update driver fields
+ * POST   /api/admin/drivers/:id/archive       — soft-delete driver
+ * POST   /api/admin/drivers/:id/unarchive     — restore driver
  */
 
 const express = require('express');
 const router  = express.Router();
 
-const users    = require('../state/users');
-const sessions = require('../services/sessions');
+const users       = require('../state/users');
+const sessions    = require('../services/sessions');
+const fleetStore  = require('../state/fleetStore');
+const driverStore = require('../state/driverStore');
 const { requireRole } = require('../middleware/auth');
 const { writeAudit }  = require('../db/audit');
 
@@ -157,6 +172,185 @@ router.post('/users/:id/reactivate', (req, res) => {
     entity_id:   id,
     action:      'reactivate',
     summary:     `${req.user.display_name} reactivated ${existing.email}`,
+  });
+  res.json({ ok: true });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LP-3 — Fleet CRUD
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── List trucks ─────────────────────────────────────────────────────────── */
+router.get('/fleet', (req, res) => {
+  const hauler_id = req.query.hauler_id || null;
+  const trucks = fleetStore.list({ hauler_id });
+  res.json({ trucks });
+});
+
+/* ── Create truck ────────────────────────────────────────────────────────── */
+router.post('/fleet', (req, res) => {
+  const { plate, hauler_id } = req.body || {};
+  if (!plate || !hauler_id) {
+    return res.status(400).json({ error: 'plate and hauler_id are required' });
+  }
+  try {
+    const truck = fleetStore.create(req.body);
+    writeAudit({
+      req,
+      entity_type: 'fleet_truck',
+      entity_id:   truck.id,
+      action:      'create',
+      summary:     `${req.user.display_name} created truck ${truck.plate} (${hauler_id})`,
+      payload:     req.body,
+    });
+    res.status(201).json({ truck });
+  } catch (err) {
+    if (err.message?.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: `Plate ${plate.toUpperCase()} is already registered` });
+    }
+    throw err;
+  }
+});
+
+/* ── Update truck ────────────────────────────────────────────────────────── */
+router.patch('/fleet/:id', (req, res) => {
+  const { id } = req.params;
+  const existing = fleetStore.findById(id);
+  if (!existing) return res.status(404).json({ error: 'Truck not found' });
+
+  try {
+    const truck = fleetStore.update(id, req.body);
+    writeAudit({
+      req,
+      entity_type: 'fleet_truck',
+      entity_id:   id,
+      action:      'update',
+      summary:     `${req.user.display_name} updated truck ${existing.plate}`,
+      payload:     req.body,
+    });
+    res.json({ truck });
+  } catch (err) {
+    if (err.message?.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'That plate is already in use by another truck' });
+    }
+    throw err;
+  }
+});
+
+/* ── Archive truck ───────────────────────────────────────────────────────── */
+router.post('/fleet/:id/archive', (req, res) => {
+  const { id } = req.params;
+  const existing = fleetStore.findById(id);
+  if (!existing) return res.status(404).json({ error: 'Truck not found' });
+
+  fleetStore.archive(id);
+  writeAudit({
+    req,
+    entity_type: 'fleet_truck',
+    entity_id:   id,
+    action:      'archive',
+    summary:     `${req.user.display_name} archived truck ${existing.plate}`,
+  });
+  res.json({ ok: true });
+});
+
+/* ── Unarchive truck ─────────────────────────────────────────────────────── */
+router.post('/fleet/:id/unarchive', (req, res) => {
+  const { id } = req.params;
+  // findById only finds non-archived; query by id directly via a raw check
+  const db = require('../db');
+  const row = db.prepare('SELECT id, plate FROM fleet_trucks WHERE id = ?').get(id);
+  if (!row) return res.status(404).json({ error: 'Truck not found' });
+
+  fleetStore.unarchive(id);
+  writeAudit({
+    req,
+    entity_type: 'fleet_truck',
+    entity_id:   id,
+    action:      'unarchive',
+    summary:     `${req.user.display_name} unarchived truck ${row.plate}`,
+  });
+  res.json({ ok: true });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * LP-3 — Driver CRUD
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── List drivers ────────────────────────────────────────────────────────── */
+router.get('/drivers', (req, res) => {
+  const hauler_id = req.query.hauler_id || null;
+  const drivers = driverStore.list({ hauler_id });
+  res.json({ drivers });
+});
+
+/* ── Create driver ───────────────────────────────────────────────────────── */
+router.post('/drivers', (req, res) => {
+  const { hauler_id, full_name } = req.body || {};
+  if (!hauler_id || !full_name) {
+    return res.status(400).json({ error: 'hauler_id and full_name are required' });
+  }
+  const driver = driverStore.create(req.body);
+  writeAudit({
+    req,
+    entity_type: 'driver',
+    entity_id:   driver.id,
+    action:      'create',
+    summary:     `${req.user.display_name} created driver ${full_name} (${hauler_id})`,
+    payload:     req.body,
+  });
+  res.status(201).json({ driver });
+});
+
+/* ── Update driver ───────────────────────────────────────────────────────── */
+router.patch('/drivers/:id', (req, res) => {
+  const { id } = req.params;
+  const existing = driverStore.findById(id);
+  if (!existing) return res.status(404).json({ error: 'Driver not found' });
+
+  const driver = driverStore.update(id, req.body);
+  writeAudit({
+    req,
+    entity_type: 'driver',
+    entity_id:   id,
+    action:      'update',
+    summary:     `${req.user.display_name} updated driver ${existing.full_name}`,
+    payload:     req.body,
+  });
+  res.json({ driver });
+});
+
+/* ── Archive driver ──────────────────────────────────────────────────────── */
+router.post('/drivers/:id/archive', (req, res) => {
+  const { id } = req.params;
+  const existing = driverStore.findById(id);
+  if (!existing) return res.status(404).json({ error: 'Driver not found' });
+
+  driverStore.archive(id);
+  writeAudit({
+    req,
+    entity_type: 'driver',
+    entity_id:   id,
+    action:      'archive',
+    summary:     `${req.user.display_name} archived driver ${existing.full_name}`,
+  });
+  res.json({ ok: true });
+});
+
+/* ── Unarchive driver ────────────────────────────────────────────────────── */
+router.post('/drivers/:id/unarchive', (req, res) => {
+  const { id } = req.params;
+  const db = require('../db');
+  const row = db.prepare('SELECT id, full_name FROM fleet_drivers WHERE id = ?').get(id);
+  if (!row) return res.status(404).json({ error: 'Driver not found' });
+
+  driverStore.unarchive(id);
+  writeAudit({
+    req,
+    entity_type: 'driver',
+    entity_id:   id,
+    action:      'unarchive',
+    summary:     `${req.user.display_name} unarchived driver ${row.full_name}`,
   });
   res.json({ ok: true });
 });

@@ -20,6 +20,7 @@ import LicenceExpiryPipeline    from '../components/drivers/LicenceExpiryPipelin
 import DriverSafetyHistogram      from '../components/drivers/DriverSafetyHistogram';
 import RestStatusByHaulerChart    from '../components/drivers/RestStatusByHaulerChart';
 import IntelligencePanel          from '../components/intelligence/IntelligencePanel';
+import DriverFormModal            from '../components/drivers/DriverFormModal';
 
 const REST_LABEL = {
   compliant: 'Compliant',
@@ -61,7 +62,9 @@ export default function Drivers() {
   const [haulerFilter, setHaulerFilter] = useState('');
   const [restFilter,   setRestFilter]   = useState('');
   const [selectedId,   setSelectedId]   = useState(null);
+  const [addOpen,      setAddOpen]      = useState(false);
   const isHaulerAdmin = user?.role === 'hauler_admin';
+  const isAxisAdmin   = user?.role === 'axis_admin';
 
   const load = useCallback(async () => {
     const qs = !isHaulerAdmin && haulerFilter ? `?hauler_id=${encodeURIComponent(haulerFilter)}` : '';
@@ -139,6 +142,11 @@ export default function Drivers() {
         }}>
           {filtered.length} of {drivers.length} drivers
         </span>
+        {isAxisAdmin && (
+          <Button variant="secondary" onClick={() => setAddOpen(true)}>
+            + Add driver
+          </Button>
+        )}
       </div>
 
       {roster.status === 'loading' && <LoadingBlock />}
@@ -188,6 +196,13 @@ export default function Drivers() {
         open={Boolean(selectedId)}
         onClose={() => setSelectedId(null)}
         onDriverUpdated={() => load()}
+      />
+
+      <DriverFormModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onCreated={() => load()}
+        haulerOptions={haulerOptions}
       />
     </PageShell>
   );

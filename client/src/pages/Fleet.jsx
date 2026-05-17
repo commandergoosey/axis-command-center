@@ -18,6 +18,7 @@ import MaintenanceForecastStrip  from '../components/fleet/MaintenanceForecastSt
 import PayloadEfficiencyChart    from '../components/fleet/PayloadEfficiencyChart';
 import FleetStatusByHaulerChart  from '../components/fleet/FleetStatusByHaulerChart';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
+import VehicleFormModal  from '../components/fleet/VehicleFormModal';
 import { formatKm } from '../lib/format';
 
 const STATUS_LABEL = {
@@ -52,8 +53,10 @@ export default function Fleet() {
   const [roster, setRoster]   = useState({ status: 'loading', data: null, error: null });
   const [haulerFilter, setHaulerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [selectedRig, setSelectedRig] = useState(null);
+  const [selectedRig, setSelectedRig]   = useState(null);
+  const [addOpen, setAddOpen]           = useState(false);
   const isHaulerAdmin = user?.role === 'hauler_admin';
+  const isAxisAdmin   = user?.role === 'axis_admin';
 
   const load = useCallback(async () => {
     const qs = !isHaulerAdmin && haulerFilter ? `?hauler_id=${encodeURIComponent(haulerFilter)}` : '';
@@ -131,6 +134,11 @@ export default function Fleet() {
         }}>
           {filtered.length} of {trucks.length} rigs
         </span>
+        {isAxisAdmin && (
+          <Button variant="secondary" onClick={() => setAddOpen(true)}>
+            + Add vehicle
+          </Button>
+        )}
       </div>
 
       {roster.status === 'loading' && <LoadingBlock />}
@@ -180,6 +188,13 @@ export default function Fleet() {
         open={Boolean(selectedRig)}
         onClose={() => setSelectedRig(null)}
         onRigUpdated={() => load()}
+      />
+
+      <VehicleFormModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onCreated={() => load()}
+        haulerOptions={haulerOptions}
       />
     </PageShell>
   );

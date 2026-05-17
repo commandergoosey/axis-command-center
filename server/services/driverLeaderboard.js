@@ -23,7 +23,7 @@
  *   page can surface real-time corridor context alongside driver rankings.
  */
 
-const { DRIVERS } = require('../mock/drivers');
+const driverStore  = require('../state/driverStore');
 const convoyState  = require('../state/convoyState');
 const dailyTargets = require('../state/dailyTargets');
 
@@ -79,8 +79,8 @@ function podiumFor(rankings, field) {
 }
 
 function compose(haulerFilter = null) {
-  const all     = DRIVERS;
-  const pool    = haulerFilter
+  const all  = driverStore.list();
+  const pool = haulerFilter
     ? all.filter((d) => d.hauler_id === haulerFilter)
     : all;
 

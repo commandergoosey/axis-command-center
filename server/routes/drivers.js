@@ -14,8 +14,8 @@
 const express = require('express');
 const router = express.Router();
 
-const { DRIVERS } = require('../mock/drivers');
-const { FLEET }   = require('../mock/fleet');
+const driverStore = require('../state/driverStore');
+const fleetStore  = require('../state/fleetStore');
 const { TRIPS }   = require('../mock/trips');
 const { ALERTS }  = require('../mock/alerts');
 const coachingState      = require('../state/coachingState');
@@ -31,11 +31,11 @@ const STATUS_WRITE_ROLES = ['axis_admin', 'axis_ops', 'hauler_admin'];
 function scoped(req) {
   const user = req.user;
   if (user?.role === 'hauler_admin' && user.hauler_id) {
-    return DRIVERS.filter((d) => d.hauler_id === user.hauler_id);
+    return driverStore.list({ hauler_id: user.hauler_id });
   }
   const filter = req.query.hauler_id;
-  if (typeof filter === 'string' && filter) return DRIVERS.filter((d) => d.hauler_id === filter);
-  return DRIVERS;
+  if (typeof filter === 'string' && filter) return driverStore.list({ hauler_id: filter });
+  return driverStore.list();
 }
 
 /** Merge the status-override layer onto a list of mock driver records. */
@@ -223,7 +223,7 @@ router.get('/:id', (req, res) => {
   if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
   const rig = driver.assigned_rig_id
-    ? FLEET.find((t) => t.id === driver.assigned_rig_id) ?? null
+    ? fleetStore.findById(driver.assigned_rig_id)
     : null;
 
   const seed = hashOf(driver.id);
@@ -333,7 +333,7 @@ router.get('/:id', (req, res) => {
 // scoped to drivers in their hauler. Lender excluded — driver
 // performance is operational PII.
 router.get('/:id/scorecard', (req, res) => {
-  const driver = DRIVERS.find((d) => d.id === req.params.id);
+  const driver = driverStore.findById(req.params.id);
   if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
   if (req.user?.role === 'lender') {
@@ -453,7 +453,7 @@ router.patch(
   (req, res) => {
     const { driverId } = req.params;
 
-    const driver = DRIVERS.find((d) => d.id === driverId);
+    const driver = driverStore.findById(driverId);
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
     // Hauler_admin scope: can only update their own hauler's drivers.

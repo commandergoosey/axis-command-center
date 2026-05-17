@@ -15,8 +15,8 @@
 const express = require('express');
 const router = express.Router();
 
-const { FLEET }   = require('../mock/fleet');
-const { DRIVERS } = require('../mock/drivers');
+const fleetStore  = require('../state/fleetStore');
+const driverStore = require('../state/driverStore');
 const { TRIPS }   = require('../mock/trips');
 const fleetStatus    = require('../state/fleetStatus');
 const rigAssignments = require('../state/rigAssignments');
@@ -32,11 +32,11 @@ const ASSIGN_WRITE_ROLES  = ['axis_admin', 'axis_ops', 'hauler_admin'];
 function scopedFleet(req) {
   const user = req.user;
   if (user?.role === 'hauler_admin' && user.hauler_id) {
-    return FLEET.filter((t) => t.hauler_id === user.hauler_id);
+    return fleetStore.list({ hauler_id: user.hauler_id });
   }
   const filter = req.query.hauler_id;
-  if (typeof filter === 'string' && filter) return FLEET.filter((t) => t.hauler_id === filter);
-  return FLEET;
+  if (typeof filter === 'string' && filter) return fleetStore.list({ hauler_id: filter });
+  return fleetStore.list();
 }
 
 /** Merge the status-override layer onto a list of mock truck records. */
@@ -190,7 +190,7 @@ router.post(
   (req, res) => {
     const { rigId } = req.params;
 
-    const truck = FLEET.find((t) => t.id === rigId);
+    const truck = fleetStore.findById(rigId);
     if (!truck) return res.status(404).json({ error: 'Truck not found' });
 
     if (req.user.role === 'hauler_admin' && truck.hauler_id !== req.user.hauler_id) {
@@ -246,7 +246,7 @@ router.get(
   (req, res) => {
     const { rigId } = req.params;
 
-    const truck = FLEET.find((t) => t.id === rigId);
+    const truck = fleetStore.findById(rigId);
     if (!truck) return res.status(404).json({ error: 'Truck not found' });
 
     if (req.user?.role === 'hauler_admin' && truck.hauler_id !== req.user.hauler_id) {
@@ -290,7 +290,7 @@ router.post(
     const { rigId } = req.params;
     const { driver_id, notes } = req.body || {};
 
-    const truck = FLEET.find((t) => t.id === rigId);
+    const truck = fleetStore.findById(rigId);
     if (!truck) return res.status(404).json({ error: 'Truck not found' });
 
     if (req.user.role === 'hauler_admin' && truck.hauler_id !== req.user.hauler_id) {
@@ -299,7 +299,7 @@ router.post(
 
     if (!driver_id) return res.status(400).json({ error: 'driver_id is required' });
 
-    const driver = DRIVERS.find((d) => d.id === driver_id);
+    const driver = driverStore.findById(driver_id);
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
     // Enforce same-hauler constraint — drivers cannot cross corridors.
@@ -330,7 +330,7 @@ router.delete(
   (req, res) => {
     const { rigId } = req.params;
 
-    const truck = FLEET.find((t) => t.id === rigId);
+    const truck = fleetStore.findById(rigId);
     if (!truck) return res.status(404).json({ error: 'Truck not found' });
 
     if (req.user.role === 'hauler_admin' && truck.hauler_id !== req.user.hauler_id) {
@@ -371,7 +371,7 @@ router.patch(
     const { rigId } = req.params;
 
     // Find the truck in the mock roster.
-    const truck = FLEET.find((t) => t.id === rigId);
+    const truck = fleetStore.findById(rigId);
     if (!truck) return res.status(404).json({ error: 'Truck not found' });
 
     // Hauler_admin scope: can only update their own hauler's trucks.

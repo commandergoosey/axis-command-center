@@ -71,6 +71,69 @@ db.exec(`
     used        INTEGER NOT NULL DEFAULT 0
   );
 
+  /* ── Fleet ──────────────────────────────────────────────────────────────
+   * fleet_trucks  — one row per vehicle. Seeded from mock/fleet.js on first boot.
+   * fleet_drivers — one row per driver.  Seeded from mock/drivers.js on first boot.
+   * archived = 1 means soft-deleted; it is excluded from all normal reads.
+   */
+  CREATE TABLE IF NOT EXISTS fleet_trucks (
+    id                      TEXT PRIMARY KEY,
+    plate                   TEXT NOT NULL,
+    hauler_id               TEXT NOT NULL,
+    hauler_display          TEXT,
+    make                    TEXT,
+    model                   TEXT,
+    axle_config             TEXT DEFAULT '6x4',
+    year_of_manufacture     INTEGER,
+    empty_weight_t          REAL,
+    gross_weight_t          REAL DEFAULT 40,
+    payload_capacity_t      REAL,
+    status                  TEXT NOT NULL DEFAULT 'idle',
+    total_km                INTEGER DEFAULT 0,
+    last_service_km         INTEGER DEFAULT 0,
+    next_service_km_due     INTEGER DEFAULT 0,
+    efficiency_l_per_100km  REAL DEFAULT 38.0,
+    trips_this_week         INTEGER DEFAULT 0,
+    maintenance_flag        TEXT,
+    road_worthy_expiry_days INTEGER DEFAULT 365,
+    last_position_ping_iso  TEXT,
+    archived                INTEGER NOT NULL DEFAULT 0,
+    created_at              TEXT NOT NULL,
+    updated_at              TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_fleet_trucks_hauler ON fleet_trucks (hauler_id, archived);
+  CREATE INDEX IF NOT EXISTS idx_fleet_trucks_status ON fleet_trucks (status, archived);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_fleet_trucks_plate ON fleet_trucks (plate) WHERE archived = 0;
+
+  CREATE TABLE IF NOT EXISTS fleet_drivers (
+    id                   TEXT PRIMARY KEY,
+    hauler_id            TEXT NOT NULL,
+    hauler_display       TEXT,
+    full_name            TEXT NOT NULL,
+    licence_number       TEXT,
+    licence_class        TEXT DEFAULT 'E',
+    licence_expiry_iso   TEXT,
+    psv_expiry_days      INTEGER DEFAULT 365,
+    phone                TEXT,
+    years_experience     INTEGER DEFAULT 0,
+    assigned_rig_id      TEXT,
+    assigned_plate       TEXT,
+    shift                TEXT DEFAULT 'day',
+    hours_this_week      REAL DEFAULT 0,
+    rest_status          TEXT DEFAULT 'compliant',
+    trips_this_week      INTEGER DEFAULT 0,
+    safety_score         INTEGER DEFAULT 80,
+    harsh_events_7d      INTEGER DEFAULT 0,
+    flag                 TEXT,
+    archived             INTEGER NOT NULL DEFAULT 0,
+    created_at           TEXT NOT NULL,
+    updated_at           TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_fleet_drivers_hauler  ON fleet_drivers (hauler_id, archived);
+  CREATE INDEX IF NOT EXISTS idx_fleet_drivers_rig     ON fleet_drivers (assigned_rig_id) WHERE assigned_rig_id IS NOT NULL;
+
   CREATE TABLE IF NOT EXISTS alert_state (
     alert_id             TEXT PRIMARY KEY,
     status_override      TEXT,
