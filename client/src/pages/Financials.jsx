@@ -20,7 +20,8 @@ import HaulerRevenueStrip  from '../components/financials/HaulerRevenueStrip';
 import DSOTrendChart       from '../components/financials/DSOTrendChart';
 import EbitdaBridgeChart        from '../components/financials/EbitdaBridgeChart';
 import CostComponentTrendChart  from '../components/financials/CostComponentTrendChart';
-import IntelligencePanel        from '../components/intelligence/IntelligencePanel';
+import IntelligencePanel              from '../components/intelligence/IntelligencePanel';
+import OperatingCostByHaulerChart    from '../components/financials/OperatingCostByHaulerChart';
 
 export default function Financials() {
   const [data, setData]   = useState(null);
@@ -109,6 +110,10 @@ export default function Financials() {
         {/* Phase 217 — monthly operating cost by component (fuel/driver/maint/other) */}
         {data?.cost_component_trend?.length > 0 && (
           <CostComponentTrendChart costComponentTrend={data.cost_component_trend} />
+        )}
+        {/* Phase 232 — operating cost by hauler from trip ledger */}
+        {data?.operating_cost_by_hauler?.length > 0 && (
+          <OperatingCostByHaulerChart operatingCostByHauler={data.operating_cost_by_hauler} />
         )}
         <IntelligencePanel page="financials" />
       </div>

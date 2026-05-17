@@ -19,7 +19,8 @@ import AlertCard           from '../components/alerts/AlertCard';
 import AutoClearedSection  from '../components/alerts/AutoClearedSection';
 import AlertSeverityTrend  from '../components/alerts/AlertSeverityTrend';
 import AlertAgeProfileChart   from '../components/alerts/AlertAgeProfileChart';
-import AlertResolutionChart  from '../components/alerts/AlertResolutionChart';
+import AlertResolutionChart      from '../components/alerts/AlertResolutionChart';
+import AlertHaulerVolumeChart    from '../components/alerts/AlertHaulerVolumeChart';
 import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 
 const SEVERITY_OPTIONS = [
@@ -209,6 +210,10 @@ export default function Alerts() {
         {/* Phase 212 — mean time to resolve by alert type */}
         {data?.resolution_by_type?.length > 0 && (
           <AlertResolutionChart resolutionByType={data.resolution_by_type} />
+        )}
+        {/* Phase 229 — open alert load by hauler */}
+        {data?.alert_volume_by_hauler?.length > 0 && (
+          <AlertHaulerVolumeChart alertVolumeByHauler={data.alert_volume_by_hauler} />
         )}
         <IntelligencePanel page="alerts" />
 

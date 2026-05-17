@@ -254,7 +254,34 @@ router.get('/', (req, res) => {
       }))
       .sort((a, b) => a.avg_cost_per_tonne - b.avg_cost_per_tonne);
 
-    res.json({ ...base, today_live, hauler_attainment, weekday_pattern, efficiency_benchmark, take_or_pay_risk, revenue_per_km, avg_payload_trend, cost_per_tonne_rank });
+    // Phase 231 — trip payload histogram. Bins southbound trips by tonnage_t
+    // into 5 bands to reveal how often trucks run underloaded. Underloaded trips
+    // (<35 t on a 40 t rated truck) are a direct EBITDA drag and coaching signal.
+    const PAYLOAD_BANDS = [
+      { key: 'under_25t', label: '< 25 t',  min: 0,  max: 25 },
+      { key: '25_30t',    label: '25–30 t', min: 25, max: 30 },
+      { key: '30_35t',    label: '30–35 t', min: 30, max: 35 },
+      { key: '35_40t',    label: '35–40 t', min: 35, max: 40 },
+      { key: '40plus',    label: '≥ 40 t',  min: 40, max: Infinity },
+    ];
+    const bandCounts = Object.fromEntries(PAYLOAD_BANDS.map((b) => [b.key, 0]));
+    TRIPS
+      .filter((t) => t.direction === 'southbound' && (t.tonnage_t ?? 0) > 0)
+      .forEach((t) => {
+        const band = PAYLOAD_BANDS.find((b) => t.tonnage_t >= b.min && t.tonnage_t < b.max);
+        if (band) bandCounts[band.key]++;
+      });
+    const totalPayloadTrips = Object.values(bandCounts).reduce((s, v) => s + v, 0);
+    const payload_histogram = PAYLOAD_BANDS.map((b) => ({
+      key:       b.key,
+      label:     b.label,
+      count:     bandCounts[b.key],
+      share_pct: totalPayloadTrips > 0
+        ? Number(((bandCounts[b.key] / totalPayloadTrips) * 100).toFixed(1))
+        : 0,
+    }));
+
+    res.json({ ...base, today_live, hauler_attainment, weekday_pattern, efficiency_benchmark, take_or_pay_risk, revenue_per_km, avg_payload_trend, cost_per_tonne_rank, payload_histogram });
   } catch (err) {
     console.error('[analytics]', err);
     res.status(500).json({ error: 'Analytics composition failed' });

@@ -18,6 +18,7 @@ import ComponentShareChart          from '../components/tariff/ComponentShareCha
 import TariffComponentSnapshot     from '../components/tariff/TariffComponentSnapshot';
 import TariffEscalationForecast    from '../components/tariff/TariffEscalationForecast';
 import IntelligencePanel           from '../components/intelligence/IntelligencePanel';
+import PassThroughHistoryChart     from '../components/tariff/PassThroughHistoryChart';
 
 export default function Tariff() {
   const [data, setData]   = useState(null);
@@ -119,6 +120,11 @@ export default function Tariff() {
             escalationForecast={data.escalation_forecast}
             currentRate={data.effective_rate_usd_per_tonne}
           />
+        )}
+
+        {/* Phase 230 — 6-month pass-through cap utilisation history */}
+        {data?.pass_through_history?.length > 0 && (
+          <PassThroughHistoryChart passThroughHistory={data.pass_through_history} />
         )}
 
         <IntelligencePanel page="tariff" />

@@ -128,6 +128,42 @@ router.get('/', (_req, res) => {
     return { month: m.month, fuel_usd: fuel, driver_usd: driver, maint_usd: maint, other_usd: other, modelled: true };
   });
 
+  // Phase 232 — operating cost by hauler derived from the trip ledger.
+  // Sums cost.total_usd across all TRIPS per hauler to reveal which hauler
+  // is the corridor's highest-cost operator. Useful alongside revenue share
+  // (by_hauler) to spot haulers with narrow or negative margin.
+  const { TRIPS: TRIPS_FIN } = require('../mock/trips');
+  const costByHauler = {};
+  TRIPS_FIN.forEach((t) => {
+    if (!(t.cost?.total_usd > 0)) return;
+    if (!costByHauler[t.hauler_id]) {
+      costByHauler[t.hauler_id] = {
+        hauler_id:    t.hauler_id,
+        display_name: t.hauler_id,      // resolved below
+        cost_usd:     0,
+        trips:        0,
+      };
+    }
+    costByHauler[t.hauler_id].cost_usd += t.cost.total_usd;
+    costByHauler[t.hauler_id].trips    += 1;
+  });
+  // Resolve display names from roster
+  roster.list().forEach((h) => {
+    if (costByHauler[h.id]) costByHauler[h.id].display_name = h.display_name;
+  });
+  const totalCostAllHaulers = Object.values(costByHauler).reduce((s, h) => s + h.cost_usd, 0);
+  const operating_cost_by_hauler = Object.values(costByHauler)
+    .map((h) => ({
+      hauler_id:    h.hauler_id,
+      display_name: h.display_name,
+      cost_usd:     Math.round(h.cost_usd),
+      trips:        h.trips,
+      share_pct:    totalCostAllHaulers > 0
+        ? Number(((h.cost_usd / totalCostAllHaulers) * 100).toFixed(1))
+        : 0,
+    }))
+    .sort((a, b) => b.cost_usd - a.cost_usd);
+
   res.json({
     generated_at: new Date().toISOString(),
     dscr,
@@ -159,6 +195,7 @@ router.get('/', (_req, res) => {
     ebitda_bridge,
     by_hauler: byHauler,   // Phase 129
     cost_component_trend,
+    operating_cost_by_hauler,
   });
 });
 

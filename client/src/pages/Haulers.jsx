@@ -9,6 +9,7 @@ import HaulerCompare         from '../components/hauler/HaulerCompare';
 import HaulerFleetShareChart   from '../components/hauler/HaulerFleetShareChart';
 import FleetUptimeChart        from '../components/hauler/FleetUptimeChart';
 import HaulerTripCadenceChart  from '../components/hauler/HaulerTripCadenceChart';
+import TurnaroundTimeChart     from '../components/hauler/TurnaroundTimeChart';
 import OnboardHaulerModal    from '../components/hauler/OnboardHaulerModal';
 import IntelligencePanel     from '../components/intelligence/IntelligencePanel';
 import Button from '../components/primitives/Button';
@@ -102,6 +103,11 @@ export default function Haulers() {
         <div style={{ marginBottom: 'var(--space-4)' }}>
           <HaulerTripCadenceChart tripCadence={state.data.trip_cadence} />
         </div>
+      )}
+
+      {/* Phase 233 — per-hauler trip turnaround time: slowest haulers first */}
+      {state.data?.turnaround_by_hauler?.haulers?.length > 0 && (
+        <TurnaroundTimeChart turnaroundByHauler={state.data.turnaround_by_hauler} />
       )}
 
       {state.status === 'loading' && <LoadingBlock />}

@@ -215,6 +215,23 @@ router.get('/', (req, res) => {
     }))
     .sort((a, b) => b.avg_days - a.avg_days);
 
+  // Phase 229 — open alert volume by hauler.
+  // Groups NEEDS_ACTION + MONITORING alerts by hauler_id so the Alerts page
+  // can surface which hauler is generating the most alert load — a fast triage
+  // and coaching pointer. Null-hauler (corridor-wide) alerts are grouped under
+  // a "Corridor-wide" label so they're visible in the ranking.
+  const alertsByHauler = {};
+  open.forEach((a) => {
+    const key   = a.hauler_id ?? '__corridor__';
+    const label = a.hauler_id
+      ? (nameById[a.hauler_id] ?? a.hauler_id)
+      : 'Corridor-wide';
+    if (!alertsByHauler[key]) alertsByHauler[key] = { hauler_id: a.hauler_id, label, count: 0 };
+    alertsByHauler[key].count++;
+  });
+  const alert_volume_by_hauler = Object.values(alertsByHauler)
+    .sort((a, b) => b.count - a.count);
+
   res.json({
     generated_at: new Date().toISOString(),
     summary: {
@@ -232,6 +249,7 @@ router.get('/', (req, res) => {
     severity_trend,
     alert_age_profile,
     resolution_by_type,
+    alert_volume_by_hauler,
     alerts: rows,
     auto_cleared: autoCleared,
   });

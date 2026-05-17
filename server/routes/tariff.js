@@ -97,6 +97,36 @@ router.get('/', (_req, res) => {
     };
   });
 
+  // Phase 230 — 6-month pass-through cap utilisation history.
+  // Shows how much of the ±15% fuel pass-through band has been consumed
+  // each month. 100% = the cap was fully triggered; 0% = diesel moved
+  // within contract tolerance. Seeded to show realistic variation —
+  // a corridor with volatile fuel prices will cluster near the cap.
+  // MODELLED — requires a live index feed to be production-accurate.
+  function seededPassThru(n) {
+    const raw = Math.sin(n * 7537 + 71) * 139_009;
+    return raw - Math.floor(raw);
+  }
+  const CAP_PCT = 15; // contract pass-through cap in %
+  const nowPT = new Date();
+  const pass_through_history = [];
+  for (let m = 5; m >= 0; m--) {
+    const d = new Date(Date.UTC(nowPT.getUTCFullYear(), nowPT.getUTCMonth() - m, 1));
+    const monthKey = d.toISOString().slice(0, 7);
+    const seed     = d.getUTCFullYear() * 100 + d.getUTCMonth();
+    // utilisation: 0 = no pass-through triggered, 1 = cap fully hit
+    const utilisation_pct = Number((seededPassThru(seed) * 100).toFixed(1));
+    const actual_delta_pct = Number(((utilisation_pct / 100) * CAP_PCT).toFixed(2));
+    pass_through_history.push({
+      month:            monthKey,
+      utilisation_pct,
+      actual_delta_pct,
+      cap_pct:          CAP_PCT,
+      cap_triggered:    utilisation_pct >= 80,
+      modelled:         true,
+    });
+  }
+
   res.json({
     generated_at: new Date().toISOString(),
     base: {
@@ -117,6 +147,7 @@ router.get('/', (_req, res) => {
     gss_cpi:    GSS_CPI,
     terms:      TARIFF_TERMS,
     escalation_forecast,
+    pass_through_history,
   });
 });
 

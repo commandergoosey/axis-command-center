@@ -114,6 +114,46 @@ router.get('/', (_req, res) => {
     };
   }).sort((a, b) => b.avg_trips_per_week - a.avg_trips_per_week);
 
+  // Phase 233 — per-hauler trip turnaround time.
+  // Avg hours from departed_at → completed_at per hauler (southbound laden trips).
+  // Slower turnaround ties up trucks and reduces weekly trip capacity. Sorted
+  // slowest-first so ops see who to coach first — a high turnaround coupled
+  // with low cadence (trip_cadence) is a strong maintenance/driver signal.
+  const turnaroundByHauler = {};
+  TRIPS
+    .filter((t) => t.direction === 'southbound' && t.departed_at && t.completed_at)
+    .forEach((t) => {
+      const hrs = (new Date(t.completed_at).getTime() - new Date(t.departed_at).getTime()) / 3_600_000;
+      if (hrs <= 0 || hrs > 120) return; // sanity-filter bad data
+      if (!turnaroundByHauler[t.hauler_id]) {
+        turnaroundByHauler[t.hauler_id] = { sum: 0, count: 0 };
+      }
+      turnaroundByHauler[t.hauler_id].sum   += hrs;
+      turnaroundByHauler[t.hauler_id].count += 1;
+    });
+  const corridorTaSum   = Object.values(turnaroundByHauler).reduce((s, h) => s + h.sum,   0);
+  const corridorTaCount = Object.values(turnaroundByHauler).reduce((s, h) => s + h.count, 0);
+  const corridorAvgTa   = corridorTaCount > 0
+    ? Number((corridorTaSum / corridorTaCount).toFixed(1))
+    : 0;
+  const turnaround_by_hauler = {
+    corridor_avg_hours: corridorAvgTa,
+    haulers: agg.haulers
+      .filter((h) => turnaroundByHauler[h.id])
+      .map((h) => {
+        const ta  = turnaroundByHauler[h.id];
+        const avg = Number((ta.sum / ta.count).toFixed(1));
+        return {
+          hauler_id:    h.id,
+          display_name: h.display_name,
+          avg_hours:    avg,
+          trip_count:   ta.count,
+          vs_corridor:  Number((avg - corridorAvgTa).toFixed(1)),
+        };
+      })
+      .sort((a, b) => b.avg_hours - a.avg_hours),
+  };
+
   res.json({
     haulers: agg.haulers.map((h) => {
       const fu = fleetByHauler[h.id] ?? { operational: 0, idle: 0, garage: 0, total: 0 };
@@ -136,6 +176,7 @@ router.get('/', (_req, res) => {
       live_haulers:      agg.haulers.filter((h) => integrationStore.summary(h.id).live).length,
     },
     trip_cadence,
+    turnaround_by_hauler,
   });
 });
 
