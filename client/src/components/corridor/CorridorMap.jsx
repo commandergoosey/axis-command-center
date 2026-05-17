@@ -162,10 +162,14 @@ export default function CorridorMap({ waypoints, convoys }) {
     if (layersRef.current.route) map.removeLayer(layersRef.current.route);
     layersRef.current.waypoints = [];
 
-    // Route polyline — use the road-following CORRIDOR_ROUTE, not waypoint straight lines
+    // Route polyline — use the road-following CORRIDOR_ROUTE, not waypoint straight lines.
+    // smoothFactor:0 disables Leaflet's Douglas-Peucker simplification so all 32
+    // intermediate points render regardless of zoom level (prevents the arc collapsing
+    // back into a straight vertical line on the Dunkwa→Tarkwa→Takoradi section).
     const route = L.polyline(CORRIDOR_ROUTE, {
       color: RUST, weight: 3, opacity: 0.85,
-      dashArray: null, lineJoin: 'round', lineCap: 'round',
+      smoothFactor: 0,
+      lineJoin: 'round', lineCap: 'round',
     }).addTo(map);
     layersRef.current.route = route;
 

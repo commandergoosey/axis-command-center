@@ -1,69 +1,75 @@
 /*
  * CorridorSchematic — horizontal SVG transit-map of the Nyinahin → Takoradi line.
  *
- * Y-zone layout (VIEW_H=260, LINE_Y=158):
- *   y=10–58   Segment pill strip (SEG label + L·E count)
- *   y=82–110  ABOVE label zone (name, km, connector stub)
- *   y=158     Corridor line (waypoint glyphs)
- *   y=178–200 BELOW label zone (connector stub, km, name)
- *   y=208–229 km scale strip
+ * Y-zone layout (VIEW_H=260, LINE_Y=155):
+ *   y=10–58   Segment pill strip  (SEG A + L·E count)
+ *   y=72–100  ABOVE label zone    (name, km)
+ *   y=155     Corridor line        (waypoint glyphs)
+ *   y=172–192 BELOW label zone    (km, name)
+ *   y=206–226 km scale strip
  *
- * Alternating label rule:
- *   Depots and weighbridges default ABOVE; junctions and rest stops default BELOW.
- *   If a waypoint would land in the same zone as a prior waypoint within 20 px X,
- *   it is flipped to the opposite zone — prevents co-located label collisions.
+ * Close-pair rule: waypoints within CLOSE_KM of their predecessor only
+ * show a glyph + tiny km number — no name text. This keeps the three
+ * paired stops (km 0/2, km 150/152, km 298/300) uncluttered.
+ *
+ * Major-waypoint zone alternates ABOVE/BELOW by index so adjacent main
+ * labels never land in the same vertical band.
  */
 
 const VIEW_W = 900;
 const VIEW_H = 260;
 const PAD_X  = 60;
-const LINE_Y = 158;
+const LINE_Y = 155;
+const CLOSE_KM = 10;          // suppress name if within this many km of prior waypoint
 
-// ABOVE zone Y-coords (absolute)
-const ABOVE_NAME_Y = 88;
-const ABOVE_KM_Y   = 104;
-// BELOW zone Y-coords (absolute)
-const BELOW_KM_Y   = 178;
-const BELOW_NAME_Y = 194;
+// ABOVE zone (absolute y)
+const A_NAME_Y = 80;
+const A_KM_Y   = 96;
+// BELOW zone (absolute y)
+const B_KM_Y   = 174;
+const B_NAME_Y = 190;
 // km scale strip
-const TICK_Y1      = 208;
-const TICK_Y2      = 216;
-const TICK_LABEL_Y = 229;
+const S_TICK1  = 206;
+const S_TICK2  = 214;
+const S_LABEL  = 226;
 // Segment pill strip
-const PILL_Y       = 10;
-const PILL_H       = 48;
-const PILL_SEG_Y   = 28;
-const PILL_LE_Y    = 46;
+const P_TOP    = 10;
+const P_H      = 48;
+const P_SEG_Y  = 28;
+const P_LE_Y   = 46;
 
-const WAYPOINT_GLYPH = {
+const GLYPH_CFG = {
   depot:       { shape: 'square',  size: 11, color: 'var(--charcoal)' },
   weighbridge: { shape: 'diamond', size: 11, color: 'var(--bauxite-rust)' },
   rest:        { shape: 'circle',  size:  8, color: 'var(--iron)' },
   junction:    { shape: 'circle',  size:  6, color: 'var(--slate)' },
 };
 
-const DEFAULT_ZONE = {
-  depot: 'above', weighbridge: 'above',
-  rest:  'below', junction:   'below',
-};
-
-/** Assign each waypoint an 'above' or 'below' label zone, flipping on collision. */
-function computeZones(waypoints, kmToX) {
-  const placed = { above: [], below: [] };
-  return waypoints.map((w) => {
-    const x = kmToX(w.km);
-    let zone = DEFAULT_ZONE[w.kind] ?? 'below';
-    const collision = placed[zone].some((px) => Math.abs(px - x) < 20);
-    if (collision) zone = zone === 'above' ? 'below' : 'above';
-    placed[zone].push(x);
-    return { ...w, zone };
+/** Tag each waypoint with showName and zone. */
+function annotate(waypoints, kmToX) {
+  const sorted = [...waypoints].sort((a, b) => a.km - b.km);
+  let majorIdx = 0;
+  return sorted.map((w, i) => {
+    const isClose  = i > 0 && (w.km - sorted[i - 1].km) <= CLOSE_KM;
+    const showName = !isClose;
+    // Major waypoints alternate ABOVE/BELOW; minor always BELOW (short km text only)
+    const zone = showName
+      ? (majorIdx++ % 2 === 0 ? 'above' : 'below')
+      : 'below';
+    return { ...w, showName, zone, x: kmToX(w.km) };
   });
+}
+
+/** Shorten label to first word only for the schematic strip. */
+function shortLabel(label) {
+  // "Nyinahin mine gate" → "Nyinahin"  |  "Kumasi junction" → "Kumasi"
+  return label.split(' ')[0];
 }
 
 export default function CorridorSchematic({ waypoints, segments, lengthKm }) {
   if (!waypoints || waypoints.length === 0) return null;
   const kmToX = (km) => PAD_X + (km / lengthKm) * (VIEW_W - 2 * PAD_X);
-  const zoned = computeZones([...waypoints].sort((a, b) => a.km - b.km), kmToX);
+  const tagged = annotate(waypoints, kmToX);
 
   return (
     <div style={{
@@ -96,7 +102,7 @@ export default function CorridorSchematic({ waypoints, segments, lengthKm }) {
       >
         <defs>
           <marker
-            id="axis-arrow"
+            id="cs-arrow"
             viewBox="0 0 10 10" refX="8" refY="5"
             markerWidth="5" markerHeight="5"
             orient="auto-start-reverse"
@@ -105,26 +111,25 @@ export default function CorridorSchematic({ waypoints, segments, lengthKm }) {
           </marker>
         </defs>
 
-        {/* ── Segment pill strip ─────────────────────────────────────── */}
+        {/* ── Segment pill strip (above the line) ────────────────────── */}
         {segments?.map((seg, idx) => {
           const from = waypoints.find((w) => w.id === seg.from);
           const to   = waypoints.find((w) => w.id === seg.to);
           if (!from || !to) return null;
-          const x1  = kmToX(from.km) + 4;
-          const x2  = kmToX(to.km)   - 4;
-          const cx  = (kmToX(from.km) + kmToX(to.km)) / 2;
-          const w   = Math.max(16, x2 - x1);
+          const x1 = kmToX(from.km) + 4;
+          const x2 = kmToX(to.km) - 4;
+          const cx = (x1 + x2) / 2;
+          const pw = Math.max(16, x2 - x1);
           return (
             <g key={seg.id}>
               <rect
-                x={x1} y={PILL_Y}
-                width={w} height={PILL_H}
+                x={x1} y={P_TOP} width={pw} height={P_H}
                 rx="5"
                 fill="var(--surface-sunk)"
                 stroke="var(--border-hairline)"
               />
               <text
-                x={cx} y={PILL_SEG_Y}
+                x={cx} y={P_SEG_Y}
                 fontSize="9" textAnchor="middle"
                 fill="var(--text-tertiary)"
                 fontFamily="var(--font-mono)"
@@ -133,7 +138,7 @@ export default function CorridorSchematic({ waypoints, segments, lengthKm }) {
                 {`SEG ${String.fromCharCode(65 + idx)}`}
               </text>
               <text
-                x={cx} y={PILL_LE_Y}
+                x={cx} y={P_LE_Y}
                 fontSize="11" textAnchor="middle"
                 fontFamily="var(--font-mono)"
                 fontWeight="500"
@@ -151,46 +156,60 @@ export default function CorridorSchematic({ waypoints, segments, lengthKm }) {
           x1={PAD_X} y1={LINE_Y}
           x2={VIEW_W - PAD_X} y2={LINE_Y}
           stroke="var(--charcoal)" strokeWidth="2"
-          markerEnd="url(#axis-arrow)"
+          markerEnd="url(#cs-arrow)"
         />
 
-        {/* ── Waypoints (glyphs + zoned labels + connectors) ─────────── */}
-        {zoned.map((w) => {
-          const x     = kmToX(w.km);
-          const glyph = WAYPOINT_GLYPH[w.kind] ?? WAYPOINT_GLYPH.junction;
+        {/* ── Waypoints ─────────────────────────────────────────────── */}
+        {tagged.map((w) => {
+          const gcfg  = GLYPH_CFG[w.kind] ?? GLYPH_CFG.junction;
+          const half  = Math.ceil(gcfg.size / 2) + 1;
           const above = w.zone === 'above';
 
-          // Connector runs from just outside the glyph to just outside the label text.
-          // Coords are relative to g transform(x, LINE_Y).
-          const halfG    = Math.ceil(glyph.size / 2) + 1;
-          const connTop  = above ? -(LINE_Y - ABOVE_KM_Y + 4) : halfG;     // rel y start
-          const connBot  = above ? -halfG                      : BELOW_KM_Y - LINE_Y - 4; // rel y end
+          if (!w.showName) {
+            // Minor waypoint — glyph + small km number below
+            return (
+              <g key={w.id} transform={`translate(${w.x} ${LINE_Y})`}>
+                <line
+                  x1={0} y1={half}
+                  x2={0} y2={B_KM_Y - LINE_Y - 3}
+                  stroke="var(--border-hairline)" strokeWidth="1"
+                />
+                <WaypointGlyph glyph={gcfg} />
+                <text
+                  y={B_KM_Y - LINE_Y}
+                  fontSize="9" textAnchor="middle"
+                  fill="var(--text-tertiary)"
+                  fontFamily="var(--font-mono)"
+                >
+                  {w.km}
+                </text>
+              </g>
+            );
+          }
+
+          // Major waypoint — name + km in the assigned zone
+          const connY1 = above ? -(LINE_Y - A_KM_Y - 3) : half;
+          const connY2 = above ? -half                   : B_KM_Y - LINE_Y - 3;
 
           return (
-            <g key={w.id} transform={`translate(${x} ${LINE_Y})`}>
-              {/* Connector stub */}
+            <g key={w.id} transform={`translate(${w.x} ${LINE_Y})`}>
               <line
-                x1={0} y1={connTop}
-                x2={0} y2={connBot}
-                stroke="var(--border-strong)"
-                strokeWidth="1"
+                x1={0} y1={connY1}
+                x2={0} y2={connY2}
+                stroke="var(--border-strong)" strokeWidth="1"
               />
-
-              {/* Glyph */}
-              <WaypointGlyph glyph={glyph} />
-
-              {/* Labels */}
+              <WaypointGlyph glyph={gcfg} />
               {above ? (
                 <>
                   <text
-                    y={ABOVE_NAME_Y - LINE_Y}
-                    fontSize="11" textAnchor="middle"
-                    fill="var(--text)" fontFamily="var(--font-primary)" fontWeight="500"
+                    y={A_NAME_Y - LINE_Y}
+                    fontSize="12" fontWeight="600" textAnchor="middle"
+                    fill="var(--text)" fontFamily="var(--font-primary)"
                   >
-                    {w.label}
+                    {shortLabel(w.label)}
                   </text>
                   <text
-                    y={ABOVE_KM_Y - LINE_Y}
+                    y={A_KM_Y - LINE_Y}
                     fontSize="10" textAnchor="middle"
                     fill="var(--text-tertiary)"
                     fontFamily="var(--font-mono)" letterSpacing="0.04em"
@@ -201,7 +220,7 @@ export default function CorridorSchematic({ waypoints, segments, lengthKm }) {
               ) : (
                 <>
                   <text
-                    y={BELOW_KM_Y - LINE_Y}
+                    y={B_KM_Y - LINE_Y}
                     fontSize="10" textAnchor="middle"
                     fill="var(--text-tertiary)"
                     fontFamily="var(--font-mono)" letterSpacing="0.04em"
@@ -209,11 +228,11 @@ export default function CorridorSchematic({ waypoints, segments, lengthKm }) {
                     km {w.km}
                   </text>
                   <text
-                    y={BELOW_NAME_Y - LINE_Y}
-                    fontSize="11" textAnchor="middle"
-                    fill="var(--text)" fontFamily="var(--font-primary)" fontWeight="500"
+                    y={B_NAME_Y - LINE_Y}
+                    fontSize="12" fontWeight="600" textAnchor="middle"
+                    fill="var(--text)" fontFamily="var(--font-primary)"
                   >
-                    {w.label}
+                    {shortLabel(w.label)}
                   </text>
                 </>
               )}
@@ -222,15 +241,20 @@ export default function CorridorSchematic({ waypoints, segments, lengthKm }) {
         })}
 
         {/* ── km scale strip ────────────────────────────────────────── */}
+        <line
+          x1={PAD_X} y1={S_TICK1}
+          x2={VIEW_W - PAD_X} y2={S_TICK1}
+          stroke="var(--border-hairline)" strokeWidth="0.5"
+        />
         {Array.from({ length: Math.floor(lengthKm / 50) + 1 }, (_, i) => i * 50).map((km) => (
           <g key={`tick-${km}`}>
             <line
-              x1={kmToX(km)} y1={TICK_Y1}
-              x2={kmToX(km)} y2={TICK_Y2}
+              x1={kmToX(km)} y1={S_TICK1}
+              x2={kmToX(km)} y2={S_TICK2}
               stroke="var(--border-strong)" strokeWidth="1"
             />
             <text
-              x={kmToX(km)} y={TICK_LABEL_Y}
+              x={kmToX(km)} y={S_LABEL}
               fontSize="9" textAnchor="middle"
               fill="var(--text-tertiary)"
               fontFamily="var(--font-mono)" letterSpacing="0.04em"
@@ -239,12 +263,6 @@ export default function CorridorSchematic({ waypoints, segments, lengthKm }) {
             </text>
           </g>
         ))}
-        {/* km baseline rule */}
-        <line
-          x1={PAD_X} y1={TICK_Y1}
-          x2={VIEW_W - PAD_X} y2={TICK_Y1}
-          stroke="var(--border-hairline)" strokeWidth="0.5"
-        />
       </svg>
     </div>
   );
@@ -267,7 +285,7 @@ function Legend() {
     }}>
       <LegendItem label="Depot"       shape="square"  color="var(--charcoal)" />
       <LegendItem label="Weighbridge" shape="diamond" color="var(--bauxite-rust)" />
-      <LegendItem label="Rest / junction" shape="circle" color="var(--iron)" />
+      <LegendItem label="Rest / jct"  shape="circle"  color="var(--iron)" />
       <LegendItem label="L laden · E empty" mono />
     </div>
   );

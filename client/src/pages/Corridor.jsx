@@ -81,7 +81,11 @@ export default function Corridor() {
               lengthKm={data?.corridor?.length_km ?? 300}
             />
           ) : (
-            <CorridorMap waypoints={data?.waypoints} convoys={data?.active_convoys} />
+            <CorridorMap
+              key={data?.waypoints?.length ?? 0}
+              waypoints={data?.waypoints}
+              convoys={data?.active_convoys}
+            />
           )}
         </div>
         <CorridorConditions
