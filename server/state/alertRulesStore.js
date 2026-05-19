@@ -22,7 +22,8 @@ function now() { return new Date().toISOString(); }
 function newId() { return crypto.randomBytes(6).toString('hex'); }
 
 const stmts = {
-  count:  db.prepare('SELECT COUNT(*) AS n FROM alert_rules'),
+  count:       db.prepare('SELECT COUNT(*) AS n FROM alert_rules'),
+  countByType: db.prepare('SELECT COUNT(*) AS n FROM alert_rules WHERE rule_type = ?'),
   list:   db.prepare('SELECT * FROM alert_rules ORDER BY rule_type, hauler_id NULLS FIRST'),
   byId:   db.prepare('SELECT * FROM alert_rules WHERE id = ?'),
   insert: db.prepare(`
@@ -81,6 +82,35 @@ function seed() {
 }
 
 seed();
+
+/*
+ * Telemetry-sourced rules that must exist even on DBs seeded before they
+ * were introduced. Checked per rule_type — safe to run on every boot.
+ * low_fuel uses a negated threshold: engine fires when value > threshold,
+ * so passing -fuel_litres with threshold -50 alerts when fuel < 50 L.
+ */
+const TELEMETRY_RULES = [
+  { rule_type: 'low_signal', threshold: 0,   severity: 'warning',  label: 'Device signal weak (<5 CSQ)' },
+  { rule_type: 'low_fuel',   threshold: -50, severity: 'warning',  label: 'Fuel below 50 L' },
+  { rule_type: 'fuel_theft', threshold: 30,  severity: 'critical', label: 'Fuel drain > 30 L (suspected theft)' },
+];
+
+function seedIfMissing() {
+  const ts = now();
+  for (const r of TELEMETRY_RULES) {
+    const { n } = stmts.countByType.get(r.rule_type);
+    if (n > 0) continue;
+    stmts.insert.run({
+      id: newId(), hauler_id: null,
+      rule_type: r.rule_type, threshold: r.threshold,
+      severity: r.severity, enabled: 1, label: r.label,
+      created_at: ts, updated_at: ts,
+    });
+    log.info(`[alertRulesStore] Seeded missing rule: ${r.rule_type}`);
+  }
+}
+
+seedIfMissing();
 
 /* ── Public API ────────────────────────────────────────────────── */
 

@@ -298,7 +298,7 @@ try {
       if (data.fuel_litres != null) {
         alertEngine.evaluate({
           rule_type:  'low_fuel',
-          value:      data.fuel_litres,
+          value:      -(data.fuel_litres), // negated so engine (value > threshold) fires when fuel < 50
           hauler_id:  data.hauler_id,
           vehicle_id: data.vehicle_id,
           meta:       { fuel_mm: data.fuel_mm, position_at: data.position_at },

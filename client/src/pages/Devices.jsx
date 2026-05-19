@@ -423,6 +423,68 @@ function CalibrationEditor({ imei, vehicleId, canEdit }) {
   );
 }
 
+/* ── Fuel gauge ───────────────────────────────────────────────────────── */
+
+function FuelGauge({ imei, vehicleId, currentFuel }) {
+  const [calMax, setCalMax] = useState(null);
+
+  useEffect(() => {
+    if (!vehicleId) return;
+    authFetch(`/api/devices/${encodeURIComponent(imei)}/calibration`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d?.points?.length > 0) {
+          setCalMax(Math.max(...d.points.map((p) => p.litres)));
+        }
+      });
+  }, [imei, vehicleId]);
+
+  const litres = currentFuel?.fuel_litres;
+  const pct    = (calMax && litres != null) ? Math.min((litres / calMax) * 100, 100) : null;
+  const tone   = pct == null ? 'var(--text-tertiary)'
+               : pct > 50   ? 'var(--signal-green)'
+               : pct > 25   ? 'var(--signal-amber)'
+               : 'var(--bauxite-rust)';
+
+  return (
+    <div style={{
+      padding: 'var(--space-4)',
+      background: 'var(--surface)',
+      border: '1px solid var(--border-hairline)',
+      borderRadius: 'var(--radius-sm)',
+    }}>
+      <div style={{ fontSize: 'var(--ts-caption-size)', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--space-2)' }}>
+        Current level
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
+        <span style={{ fontSize: 32, fontWeight: 'var(--fw-semibold)', color: tone, fontVariantNumeric: 'tabular-nums' }}>
+          {litres != null ? litres.toFixed(0) : '—'}
+        </span>
+        <span style={{ fontSize: 'var(--ts-body-sm-size)', color: 'var(--text-secondary)' }}>L</span>
+        {pct != null && (
+          <span style={{ fontSize: 'var(--ts-caption-size)', color: 'var(--text-tertiary)', marginLeft: 4 }}>
+            {pct.toFixed(0)}%
+          </span>
+        )}
+      </div>
+      <div style={{ height: 8, background: 'var(--border-soft)', borderRadius: 4, overflow: 'hidden', marginBottom: 10 }}>
+        <div style={{
+          height: '100%',
+          width: pct != null ? `${pct}%` : '0%',
+          background: tone,
+          borderRadius: 4,
+          transition: 'width 400ms ease',
+        }} />
+      </div>
+      <div style={{ fontSize: 'var(--ts-caption-size)', color: 'var(--text-tertiary)', display: 'flex', gap: 12 }}>
+        {currentFuel?.fuel_mm != null && <span>{currentFuel.fuel_mm} mm depth</span>}
+        {calMax != null && <span>Tank: {calMax.toFixed(0)} L full</span>}
+        {currentFuel?.recorded_at && <span>{lastSeenLabel(currentFuel.recorded_at)}</span>}
+      </div>
+    </div>
+  );
+}
+
 /* ── Fuel history ─────────────────────────────────────────────────────── */
 
 function FuelHistory({ imei }) {
@@ -694,6 +756,10 @@ function DeviceDetail({ device, onClose, onUpdated, canEdit }) {
 
         {tab === 'Fuel' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+            {device.current_fuel
+              ? <FuelGauge imei={device.imei} vehicleId={device.vehicle_id} currentFuel={device.current_fuel} />
+              : <div style={{ padding: 'var(--space-4)', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: 'var(--ts-caption-size)', border: '1px dashed var(--border-soft)', borderRadius: 'var(--radius-sm)' }}>No fuel readings yet — connect an Escort FLS rod to start receiving data.</div>
+            }
             <div>
               <div style={{ fontSize: 'var(--ts-caption-size)', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--space-3)' }}>Calibration curve</div>
               <CalibrationEditor imei={device.imei} vehicleId={device.vehicle_id} canEdit={canEdit} />
