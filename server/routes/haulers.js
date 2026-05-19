@@ -623,8 +623,8 @@ router.post('/', requireRole(...OPS_ROLES), (req, res) => {
   if (!Number.isInteger(trucks) || trucks <= 0) {
     return res.status(400).json({ error: 'contracted_trucks must be a positive integer' });
   }
-  if (!['loconav', 'custom', 'manual'].includes(integration_type)) {
-    return res.status(400).json({ error: 'integration_type must be loconav, custom, or manual' });
+  if (!['loconav', 'custom', 'manual', 'mqtt'].includes(integration_type)) {
+    return res.status(400).json({ error: 'integration_type must be loconav, custom, manual, or mqtt' });
   }
   if (contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email)) {
     return res.status(400).json({ error: 'contact_email must be a valid email address' });
@@ -679,10 +679,14 @@ router.patch('/:id', requireRole(...OPS_ROLES), (req, res) => {
   if (!h) return res.status(404).json({ error: 'Hauler not found' });
 
   const {
-    display_name, contracted_trucks,
+    display_name, contracted_trucks, integration_type,
     contact_name, contact_email, contract_share_pct, planned_start_date,
   } = req.body || {};
 
+  const VALID_INTEGRATION_TYPES = ['loconav', 'custom', 'manual', 'mqtt'];
+  if (integration_type != null && !VALID_INTEGRATION_TYPES.includes(integration_type)) {
+    return res.status(400).json({ error: 'integration_type must be loconav, custom, manual, or mqtt' });
+  }
   if (contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact_email)) {
     return res.status(400).json({ error: 'contact_email must be a valid email address' });
   }
@@ -693,6 +697,7 @@ router.patch('/:id', requireRole(...OPS_ROLES), (req, res) => {
   const fields = {};
   if (display_name      != null) fields.display_name      = display_name.trim();
   if (contracted_trucks != null) fields.contracted_trucks = Number(contracted_trucks);
+  if (integration_type  != null) fields.integration_type  = integration_type;
   if ('contact_name'       in (req.body || {})) fields.contact_name       = contact_name?.trim()  || null;
   if ('contact_email'      in (req.body || {})) fields.contact_email      = contact_email?.trim() || null;
   if ('contract_share_pct' in (req.body || {})) fields.contract_share_pct = contract_share_pct != null ? Number(contract_share_pct) : null;
