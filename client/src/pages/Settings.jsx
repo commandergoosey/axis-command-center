@@ -18,6 +18,7 @@ import UserManagementPanel from '../components/settings/UserManagementPanel';
 import HaulerManagementPanel from '../components/settings/HaulerManagementPanel';
 import NotificationPrefsPanel from '../components/settings/NotificationPrefsPanel';
 import WebhookEventsPanel     from '../components/settings/WebhookEventsPanel';
+import AlertRulesPanel        from '../components/settings/AlertRulesPanel';
 
 function fmtSync(iso) {
   if (!iso) return '—';
@@ -93,6 +94,7 @@ export default function Settings() {
         <IntegrationsPanel integrations={data?.integrations ?? []} />
         <IntegrationHealthPanel haulers={data?.integrations ?? []} />
         <NotificationPrefsPanel />
+        <AlertRulesPanel />
         <WebhookEventsPanel />
         <AuditPanel />
         <IntelligencePanel page="settings" />
