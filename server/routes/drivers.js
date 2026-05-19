@@ -437,6 +437,84 @@ router.get('/:id/scorecard', (req, res) => {
   });
 });
 
+// ── LP-32 — Driver hours from real trip data ───────────────────────
+//
+// GET /api/drivers/:id/hours
+//
+// Returns hours-on-duty and trip counts from real DB trips for the
+// current ISO week plus the previous week, keyed by driver_id.
+// Falls back to mock fixture values when no DB trips exist.
+
+router.get('/:id/hours', (req, res) => {
+  const rows  = scoped(req);
+  const driver = rows.find((d) => d.id === req.params.id);
+  if (!driver) return res.status(404).json({ error: 'Driver not found' });
+
+  // Hauler scope: hauler_admin can only query their own hauler's drivers.
+  if (req.user?.role === 'hauler_admin' && driver.hauler_id !== req.user.hauler_id) {
+    return res.status(403).json({ error: 'Hauler admins can only view their own drivers' });
+  }
+
+  const tripStore = require('../state/tripStore');
+  const now     = new Date();
+  const dayMs   = 86_400_000;
+  const weekMs  = 7 * dayMs;
+
+  // ISO week boundaries (Monday 00:00 UTC → Sunday 23:59 UTC).
+  const dow        = (now.getUTCDay() + 6) % 7; // 0 = Mon
+  const weekStart  = new Date(now.getTime() - dow * dayMs);
+  weekStart.setUTCHours(0, 0, 0, 0);
+  const weekEnd    = new Date(weekStart.getTime() + weekMs);
+  const prevStart  = new Date(weekStart.getTime() - weekMs);
+
+  const thisWeekTrips = tripStore.list({ status: 'completed' }).filter((t) =>
+    t.driver_id === driver.id
+    && t.departed_at >= weekStart.toISOString()
+    && t.departed_at < weekEnd.toISOString(),
+  );
+  const prevWeekTrips = tripStore.list({ status: 'completed' }).filter((t) =>
+    t.driver_id === driver.id
+    && t.departed_at >= prevStart.toISOString()
+    && t.departed_at < weekStart.toISOString(),
+  );
+
+  function sumHours(trips) {
+    return Number((trips.reduce((s, t) => s + ((t.duration_min ?? 0) / 60), 0)).toFixed(2));
+  }
+
+  const thisWeekH = sumHours(thisWeekTrips);
+  const prevWeekH = sumHours(prevWeekTrips);
+
+  // REST cap: 60 h/week is the Ghana corridor standard.
+  const REST_CAP_H = 60;
+  const restStatus = thisWeekH >= REST_CAP_H       ? 'breach'
+                   : thisWeekH >= REST_CAP_H * 0.85 ? 'warning'
+                   : 'compliant';
+
+  const realData = thisWeekTrips.length > 0 || prevWeekTrips.length > 0;
+
+  res.json({
+    driver_id:        driver.id,
+    full_name:        driver.full_name,
+    hauler_id:        driver.hauler_id,
+    real_data:        realData,
+    this_week: {
+      since:        weekStart.toISOString(),
+      until:        weekEnd.toISOString(),
+      trips:        realData ? thisWeekTrips.length : (driver.trips_this_week ?? 0),
+      hours:        realData ? thisWeekH            : (driver.hours_this_week ?? 0),
+      rest_status:  restStatus,
+      rest_cap_h:   REST_CAP_H,
+    },
+    last_week: {
+      since:  prevStart.toISOString(),
+      until:  weekStart.toISOString(),
+      trips:  prevWeekTrips.length,
+      hours:  prevWeekH,
+    },
+  });
+});
+
 // ── Phase 103 — driver status write ───────────────────────────────
 //
 // PATCH /api/drivers/:driverId/status

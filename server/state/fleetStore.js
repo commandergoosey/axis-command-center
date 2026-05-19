@@ -62,6 +62,13 @@ const stmts = {
   `),
   archive:   db.prepare('UPDATE fleet_trucks SET archived = 1, updated_at = ? WHERE id = ?'),
   unarchive: db.prepare('UPDATE fleet_trucks SET archived = 0, updated_at = ? WHERE id = ?'),
+
+  // LP-27: status sync from event pipeline.
+  byPlate:   db.prepare(`
+    SELECT *, (total_km - last_service_km) AS km_since_service
+      FROM fleet_trucks WHERE plate = ? AND archived = 0 LIMIT 1
+  `),
+  setStatus: db.prepare('UPDATE fleet_trucks SET status = @status, updated_at = @updated_at WHERE id = @id'),
 };
 
 /* ── Seed from mock on first boot ───────────────────────────────── */
@@ -207,4 +214,15 @@ function unarchive(id) {
   stmts.unarchive.run(new Date().toISOString(), id);
 }
 
-module.exports = { list, findById, create, update, archive, unarchive };
+/** Find a truck by registration plate (case-insensitive). */
+function findByPlate(plate) {
+  if (!plate) return null;
+  return stmts.byPlate.get(String(plate).trim().toUpperCase()) ?? null;
+}
+
+/** Set a truck's operational status ('idle', 'en_route', 'maintenance', etc.). */
+function setStatus(id, status) {
+  stmts.setStatus.run({ id, status, updated_at: new Date().toISOString() });
+}
+
+module.exports = { list, findById, findByPlate, setStatus, create, update, archive, unarchive };

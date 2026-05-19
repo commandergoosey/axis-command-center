@@ -21,10 +21,67 @@ const { writeReport } = require('../services/reportBuilder');
 const { writeLiveExport } = require('../services/liveExportBuilder');
 const reportAI = require('../services/reportAI');
 const { requireRole } = require('../middleware/auth');
-const reportRuns = require('../state/reportRuns');
+const reportRuns      = require('../state/reportRuns');
 const reportSchedules = require('../state/reportSchedules');
-const roster = require('../state/roster');
-const { writeAudit } = require('../db/audit');
+const roster          = require('../state/roster');
+const tripStore       = require('../state/tripStore');
+const metricsAgg      = require('../services/metricsAggregator');
+const { writeAudit }  = require('../db/audit');
+
+/* ── LP-29: Real metrics for report generation ───────────────────── */
+
+const CYCLE_TARGET_MIN = parseInt(process.env.CYCLE_TARGET_HOURS ?? '26', 10) * 60;
+
+function computeReportMetrics(typeId, periodFrom, periodTo) {
+  // Only compute for known report types that have relevant real data.
+  if (!['shift_handover', 'ops_weekly', 'hauler_monthly', 'lender_quarterly', 'filings_pack'].includes(typeId)) {
+    return {};
+  }
+
+  try {
+    // Date range defaults: last 7 days if not specified.
+    const to   = periodTo   ? new Date(periodTo)   : new Date();
+    const from = periodFrom ? new Date(periodFrom)  : new Date(to.getTime() - 7 * 86_400_000);
+    const fromIso = from.toISOString();
+    const toIso   = to.toISOString();
+
+    // Aggregate trips across all haulers for the period.
+    const haulers = roster.list();
+    let totalTrips = 0, totalTonnes = 0, totalOnTime = 0;
+    const haulerBreakdown = [];
+
+    for (const h of haulers) {
+      const rows = tripStore.forDateRange(h.id, fromIso, toIso);
+      const count   = rows.length;
+      const tonnes  = rows.reduce((s, t) => s + (t.tonnage_t ?? 0), 0);
+      const onTime  = rows.filter((t) => (t.duration_min ?? Infinity) <= CYCLE_TARGET_MIN).length;
+      totalTrips   += count;
+      totalTonnes  += tonnes;
+      totalOnTime  += onTime;
+      if (count > 0) {
+        haulerBreakdown.push({
+          hauler_id:      h.id,
+          hauler_display: h.display_name,
+          trips:          count,
+          tonnes:         Number(tonnes.toFixed(1)),
+          on_time_rate:   count > 0 ? Number((onTime / count).toFixed(3)) : null,
+        });
+      }
+    }
+
+    return {
+      real_data:       true,
+      period_from:     fromIso.slice(0, 10),
+      period_to:       toIso.slice(0, 10),
+      total_trips:     totalTrips,
+      total_tonnes:    Number(totalTonnes.toFixed(1)),
+      on_time_rate:    totalTrips > 0 ? Number((totalOnTime / totalTrips).toFixed(3)) : null,
+      hauler_breakdown: haulerBreakdown,
+    };
+  } catch (_) {
+    return {};
+  }
+}
 
 // Phase 87 — live in-browser exports. Distinct from the LIBRARY
 // (which is PDF generation) — these are printable cockpit views
@@ -128,6 +185,13 @@ router.get('/download/:typeId', (req, res, next) => {
   }
 });
 
+// ── LP-29: Real metrics query (no stub created) ───────────────────────────────
+router.get('/metrics', requireRole(...OPS_ROLES), (req, res) => {
+  const { type_id = 'ops_weekly', period_from, period_to } = req.query;
+  const metrics = computeReportMetrics(type_id, period_from || null, period_to || null);
+  res.json({ metrics });
+});
+
 router.post('/generate', requireRole(...OPS_ROLES), (req, res, next) => {
   try {
     const {
@@ -161,6 +225,13 @@ router.post('/generate', requireRole(...OPS_ROLES), (req, res, next) => {
            : 8,
       filename: filenameFor(type_id, label),
     };
+    // LP-29: enrich with real metrics where available.
+    const metrics = computeReportMetrics(type_id, period_from, period_to);
+    if (metrics.real_data) {
+      instance.metrics  = metrics;
+      instance.real_data = true;
+    }
+
     reportRuns.record(instance);
     writeAudit({
       req,
@@ -173,6 +244,7 @@ router.post('/generate', requireRole(...OPS_ROLES), (req, res, next) => {
     res.status(201).json({
       generated_at: new Date().toISOString(),
       instance,
+      metrics,
       download_url: `/api/reports/download/${type_id}?label=${encodeURIComponent(label)}` +
         (period_from ? `&period_from=${period_from}` : '') +
         (period_to   ? `&period_to=${period_to}`     : ''),

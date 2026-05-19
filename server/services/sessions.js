@@ -22,15 +22,24 @@ const stmts = {
     INSERT INTO sessions (token, user_id, issued_at, expires_at, ip, user_agent)
     VALUES (@token, @user_id, @issued_at, @expires_at, @ip, @user_agent)
   `),
-  get:     db.prepare('SELECT * FROM sessions WHERE token = ?'),
-  delete:  db.prepare('DELETE FROM sessions WHERE token = ?'),
-  purge:   db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')"),
-  byUser:  db.prepare('DELETE FROM sessions WHERE user_id = ?'),
+  get:        db.prepare('SELECT * FROM sessions WHERE token = ?'),
+  delete:     db.prepare('DELETE FROM sessions WHERE token = ?'),
+  purge:      db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')"),
+  byUser:     db.prepare('DELETE FROM sessions WHERE user_id = ?'),
+  listUser:        db.prepare("SELECT token, user_id, issued_at, expires_at, ip, user_agent FROM sessions WHERE user_id = ? AND expires_at >= datetime('now') ORDER BY issued_at DESC"),
+  listAll:         db.prepare("SELECT token, user_id, issued_at, expires_at, ip, user_agent FROM sessions WHERE expires_at >= datetime('now') ORDER BY issued_at DESC"),
+  deleteByToken:   db.prepare('DELETE FROM sessions WHERE token = ?'),
+  getByPrefix:     db.prepare("SELECT * FROM sessions WHERE token LIKE ? LIMIT 1"),
+  purgeResets:     db.prepare("DELETE FROM password_reset_tokens WHERE expires_at < datetime('now')"),
 };
 
-/* Purge expired rows on boot and then every hour. */
+/* Purge expired sessions + reset tokens on boot and then every hour. */
 stmts.purge.run();
-setInterval(() => stmts.purge.run(), 60 * 60 * 1000);
+try { stmts.purgeResets.run(); } catch (_) {} // table may not exist yet on first boot
+setInterval(() => {
+  stmts.purge.run();
+  try { stmts.purgeResets.run(); } catch (_) {}
+}, 60 * 60 * 1000);
 
 /**
  * Issue a new session token for a user.
@@ -87,4 +96,35 @@ function revokeAll(userId) {
   stmts.byUser.run(userId);
 }
 
-module.exports = { issue, resolve, revoke, revokeAll };
+/**
+ * List all active (non-expired) sessions for one user.
+ * Returns rows with token prefix only (never the full token).
+ */
+function list(userId) {
+  return stmts.listUser.all(userId).map(maskToken);
+}
+
+/**
+ * List all active sessions across all users (admin view).
+ */
+function listAll() {
+  return stmts.listAll.all().map(maskToken);
+}
+
+/**
+ * Revoke a session by token prefix (first 8 chars).
+ * Returns { ok, user_id } — caller must verify user_id matches before acting.
+ */
+function revokeByPrefix(prefix) {
+  const row = stmts.getByPrefix.get(`${prefix}%`);
+  if (!row) return { ok: false, user_id: null };
+  stmts.deleteByToken.run(row.token);
+  return { ok: true, user_id: row.user_id };
+}
+
+/** Mask full token — expose only first 8 chars for UI display. */
+function maskToken(s) {
+  return { ...s, token_prefix: s.token.slice(0, 8), token: undefined };
+}
+
+module.exports = { issue, resolve, revoke, revokeAll, list, listAll, revokeByPrefix };

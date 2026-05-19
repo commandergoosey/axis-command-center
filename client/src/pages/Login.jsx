@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { LogIn } from 'lucide-react';
+import { LogIn, Mail } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { API_BASE } from '../lib/auth';
 import AxisWordmark from '../components/brand/AxisWordmark';
@@ -24,6 +24,13 @@ export default function Login() {
   const [busy, setBusy]         = useState(false);
   const [error, setError]       = useState(null);
   const [accounts, setAccounts] = useState([]);
+
+  // Forgot-password inline form state
+  const [resetOpen,    setResetOpen]    = useState(false);
+  const [resetEmail,   setResetEmail]   = useState('');
+  const [resetBusy,    setResetBusy]    = useState(false);
+  const [resetSent,    setResetSent]    = useState(false);
+  const [resetError,   setResetError]   = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/auth/demo`)
@@ -51,6 +58,26 @@ export default function Login() {
     setEmail(acc.email);
     setPassword(acc.password_hint);
     setError(null);
+  }
+
+  async function submitReset(e) {
+    e.preventDefault();
+    setResetBusy(true);
+    setResetError(null);
+    try {
+      const res  = await fetch(`${API_BASE}/api/auth/request-reset`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: resetEmail }),
+      });
+      const body = await res.json();
+      if (!res.ok) { setResetError(body.error || `Error ${res.status}`); return; }
+      setResetSent(true);
+    } catch (err) {
+      setResetError(err.message);
+    } finally {
+      setResetBusy(false);
+    }
   }
 
   return (
@@ -158,6 +185,72 @@ export default function Login() {
           </button>
         </form>
 
+        {/* ── Forgot password ────────────────────────────────── */}
+        <div style={{ marginTop: 'var(--space-3)', textAlign: 'right' }}>
+          <button
+            type="button"
+            onClick={() => { setResetOpen((o) => !o); setResetSent(false); setResetError(null); setResetEmail(''); }}
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              color: 'var(--text-tertiary)', fontSize: 'var(--ts-caption-size)',
+              cursor: 'pointer', fontFamily: 'var(--font-primary)',
+              textDecoration: 'underline',
+            }}
+          >
+            {resetOpen ? 'Cancel' : 'Forgot password?'}
+          </button>
+        </div>
+
+        {resetOpen && (
+          <div style={{
+            marginTop: 'var(--space-2)',
+            padding: 'var(--space-3)',
+            background: 'var(--surface)',
+            border: '1px solid var(--border-hairline)',
+            borderRadius: 'var(--radius-sm)',
+          }}>
+            {resetSent ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: 'var(--ts-caption-size)' }}>
+                <Mail size={13} strokeWidth={1.6} color="var(--signal-green)" />
+                If that address exists, a reset link has been sent. Check your inbox.
+              </div>
+            ) : (
+              <form onSubmit={submitReset} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                <div style={{ fontSize: 'var(--ts-caption-size)', color: 'var(--text-secondary)', marginBottom: 2 }}>
+                  Enter your account email and we'll send a reset link.
+                </div>
+                <input
+                  type="email"
+                  required
+                  placeholder="you@axis.gh"
+                  value={resetEmail}
+                  onChange={(e) => { setResetEmail(e.target.value); setResetError(null); }}
+                  disabled={resetBusy}
+                  autoFocus
+                />
+                {resetError && (
+                  <div style={{ color: 'var(--bauxite-rust)', fontSize: 'var(--ts-caption-size)' }}>{resetError}</div>
+                )}
+                <button type="submit" disabled={resetBusy || !resetEmail} style={{
+                  padding: '8px 14px',
+                  background: 'var(--bauxite-rust)',
+                  color: 'var(--bone)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  fontFamily: 'var(--font-primary)',
+                  fontSize: 'var(--ts-caption-size)',
+                  fontWeight: 'var(--fw-medium)',
+                  cursor: resetBusy ? 'wait' : 'pointer',
+                  opacity: resetBusy ? 0.7 : 1,
+                  alignSelf: 'flex-start',
+                }}>
+                  {resetBusy ? 'Sending…' : 'Send reset link'}
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+
         <div style={{
           marginTop: 'var(--space-6)',
           paddingTop: 'var(--space-4)',
@@ -261,6 +354,10 @@ export default function Login() {
         }
         input[type="email"]:focus, input[type="password"]:focus {
           border-color: var(--bauxite-rust);
+        }
+        input[type="email"]:disabled, input[type="password"]:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
       `}</style>
     </div>

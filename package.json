@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@axis/telematics-core": "file:../telematics-core",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.1.0"
+  }
+}

@@ -27,6 +27,7 @@ import {
   Trophy,
   History,
   BarChart2,
+  Cpu,
   Settings as SettingsIcon,
   PanelLeftOpen,
   PanelLeftClose,
@@ -73,6 +74,7 @@ const NAV = [
       { path: '/haulers',      label: 'Haulers',     icon: Building2 },
       { path: '/fleet',        label: 'Fleet',       icon: ClipboardList },
       { path: '/maintenance',  label: 'Maintenance', icon: Wrench },
+      { path: '/devices',      label: 'Devices',     icon: Cpu },
     ],
   },
   {

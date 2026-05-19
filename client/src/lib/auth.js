@@ -61,7 +61,7 @@ export const ROLE_PAGES = {
   axis_admin: null, // wildcard
   axis_ops: [
     '/', '/corridor', '/convoys', '/trips', '/drivers', '/compliance',
-    '/haulers', '/fleet', '/maintenance',
+    '/haulers', '/fleet', '/maintenance', '/devices',
     '/contract', '/tariff', '/diesel', '/tranches', '/financials', '/risks', '/calendar', '/sensitivity', '/settlements', '/claims',
     '/alerts', '/reports', '/my-hauler', '/playbooks', '/coaching', '/handovers', '/leaderboard', '/inbox', '/me/activity', '/analytics',
   ],

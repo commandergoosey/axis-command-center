@@ -95,6 +95,19 @@ router.get('/stream', requireAuth, (req, res) => {
   });
 });
 
+// ── LP-43 — Unread count endpoint ────────────────────────────────
+//
+// GET /api/notifications/unread-count
+//
+// Lightweight poll endpoint for badge updates. Returns only the
+// unread count without full feed payload. Clients that use the SSE
+// stream don't need this, but it's a useful REST fallback.
+
+router.get('/unread-count', requireAuth, (req, res) => {
+  const count = notifications.unreadCount(req.user.id);
+  res.json({ unread_count: count, user_id: req.user.id });
+});
+
 // ── Phase 82 — Notifications inbox ───────────────────────────────
 
 router.get('/inbox', requireAuth, (req, res) => {

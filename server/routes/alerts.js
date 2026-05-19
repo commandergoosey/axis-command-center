@@ -359,6 +359,89 @@ router.post('/:id/assign', requireAuth, express.json(), (req, res) => {
   res.json(merge(alert));
 });
 
+/* ── LP-42 — Bulk alert operations ─────────────────────────────────
+ *
+ * POST /api/alerts/bulk
+ * Body: { action, ids[], until_iso?, user_id?, note? }
+ *
+ * Actions: resolve | snooze | reopen | assign
+ * Returns per-ID results so the client can show partial failures.
+ */
+router.post('/bulk', requireAuth, express.json(), (req, res) => {
+  const { action, ids, until_iso, user_id, note } = req.body ?? {};
+  if (!action || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'action and ids[] are required' });
+  }
+  if (!['resolve', 'snooze', 'reopen', 'assign'].includes(action)) {
+    return res.status(400).json({ error: `Unknown action "${action}"` });
+  }
+  if (action === 'snooze') {
+    if (!until_iso || Number.isNaN(new Date(until_iso).getTime())) {
+      return res.status(400).json({ error: 'until_iso is required for snooze' });
+    }
+    if (new Date(until_iso).getTime() <= Date.now()) {
+      return res.status(400).json({ error: 'until_iso must be in the future' });
+    }
+  }
+
+  // Validate assignee for assign action.
+  let assignUser = null;
+  if (action === 'assign' && user_id) {
+    const { findById: findU } = require('../state/users');
+    assignUser = findU(user_id);
+    if (!assignUser) return res.status(400).json({ error: 'Unknown user_id for assign' });
+  }
+
+  const results = [];
+  const cap = Math.min(ids.length, 100); // guard against huge payloads
+
+  for (let i = 0; i < cap; i++) {
+    const id    = ids[i];
+    const alert = alertById(id);
+    if (!alert) { results.push({ id, ok: false, reason: 'not found' }); continue; }
+    if (!canTriage(alert, req.user)) { results.push({ id, ok: false, reason: 'forbidden' }); continue; }
+
+    try {
+      switch (action) {
+        case 'resolve':
+          alertState.resolve(alert.id, {
+            by_display: req.user.display_name,
+            note:       typeof note === 'string' ? note.trim() || null : null,
+          });
+          break;
+        case 'snooze':
+          alertState.snooze(alert.id, { until_iso: new Date(until_iso).toISOString() });
+          break;
+        case 'reopen':
+          alertState.reopen(alert.id);
+          break;
+        case 'assign':
+          alertState.assign(alert.id, assignUser ? {
+            user_id:      assignUser.id,
+            display_name: assignUser.display_name,
+            role:         assignUser.role,
+          } : { user_id: null });
+          break;
+      }
+      results.push({ id, ok: true, alert: merge(alert) });
+    } catch (err) {
+      results.push({ id, ok: false, reason: err.message });
+    }
+  }
+
+  const succeeded = results.filter((r) => r.ok).length;
+  writeAudit({
+    req,
+    entity_type: 'alert_bulk',
+    entity_id:   action,
+    action:      `bulk_${action}`,
+    summary:     `Bulk ${action}: ${succeeded}/${cap} alerts`,
+    payload:     { action, ids: ids.slice(0, cap), until_iso, user_id, note },
+  });
+
+  res.json({ action, results, succeeded, failed: cap - succeeded });
+});
+
 router.post('/:id/note', requireAuth, express.json(), (req, res) => {
   const alert = loadForTriage(req, res); if (!alert) return;
   const body = typeof req.body?.body === 'string' ? req.body.body.trim() : '';

@@ -12,6 +12,7 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
+    "@axis/telematics-core": "file:../packages/telematics-core",
     "@anthropic-ai/sdk": "^0.90.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",

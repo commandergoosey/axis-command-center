@@ -274,6 +274,8 @@ module.exports = {
   reactivate,
   createResetToken,
   consumeResetToken,
-  // Expose DEMO_USERS metadata (passwords stripped) for the /demo endpoint in non-prod
-  DEMO_USERS: DEMO_USERS.map(({ password, ...u }) => u),
+  // Expose DEMO_USERS metadata for the /demo endpoint in non-prod.
+  // password_hint is included intentionally — this is dev/staging only and
+  // the endpoint is disabled in NODE_ENV=production.
+  DEMO_USERS: DEMO_USERS.map(({ password, ...u }) => ({ ...u, password_hint: password })),
 };

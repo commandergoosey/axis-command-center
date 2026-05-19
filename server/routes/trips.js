@@ -12,15 +12,44 @@
 const express = require('express');
 const router = express.Router();
 
-const roster = require('../state/roster');
+const roster      = require('../state/roster');
 const convoyState = require('../state/convoyState');
+const tripStore   = require('../state/tripStore');
+const { requireAuth, requireRole } = require('../middleware/auth');
+const { enforceHaulerScope } = require('../middleware/haulerScope');
+const { writeAudit } = require('../db/audit');
 const { TRIPS, delayHeatmap } = require('../mock/trips');
 const { WAYPOINTS } = require('../mock/corridor');
 const { FLEET }    = require('../mock/fleet');
 const { DRIVERS }  = require('../mock/drivers');
 const { ALERTS }   = require('../mock/alerts');
 
-router.get('/', (req, res) => {
+/* ── Normalise a DB trip row into the display shape expected by the client ── */
+function normaliseDbTrip(t, haulersById) {
+  return {
+    id:                   t.id,
+    hauler_id:            t.hauler_id,
+    hauler_display_name:  haulersById[t.hauler_id] ?? t.hauler_id,
+    direction:            t.direction === 'empty' ? 'northbound' : 'southbound',
+    origin:               t.origin       ?? null,
+    destination:          t.destination  ?? null,
+    departed_at:          t.departed_at  ?? null,
+    arrived_at:           t.arrived_at   ?? null,
+    completed_at:         t.arrived_at   ?? null,
+    duration_min:         t.duration_min ?? null,
+    delay_min:            null,   // not modelled for real trips yet
+    distance_km:          t.distance_km  ?? null,
+    tonnage_t:            t.tonnage_t    ?? null,
+    axle_load_pct:        t.axle_load_pct ?? null,
+    vehicle_id:           t.vehicle_id   ?? null,
+    driver_id:            t.driver_id    ?? null,
+    source:               t.source,
+    status:               t.status,
+    _real: true,  // marker so the client can distinguish real vs mock trips
+  };
+}
+
+router.get('/', requireAuth, enforceHaulerScope, (req, res) => {
   const haulerId = req.params.hauler_id || req.query.hauler_id || null;
   const limit = Math.min(200, parseInt(req.query.limit, 10) || 40);
 
@@ -62,6 +91,19 @@ router.get('/', (req, res) => {
     roster.list().map((h) => [h.id, h.display_name]),
   );
 
+  // LP-16 — prepend real DB completed trips at the head of the ledger.
+  // Excluded from cost/revenue aggregation (no financial model yet) so the
+  // analytics cards stay purely model-backed. Ledger count reflects all sources.
+  let realTrips = [];
+  try {
+    const { trips: dbTrips } = tripStore.list({
+      hauler_id: haulerId || null,
+      status:    'completed',
+      limit,
+    });
+    realTrips = dbTrips.map((t) => normaliseDbTrip(t, haulersById));
+  } catch (_) { /* non-fatal */ }
+
   // Phase 123 — blend live completed convoys at the head of the ledger.
   // They are excluded from the cost/revenue aggregation (no financial data
   // available) so the analytics cards (cost_per_route, delay_heatmap) remain
@@ -77,7 +119,8 @@ router.get('/', (req, res) => {
     hauler_display_name: haulersById[t.hauler_id] ?? t.hauler_id,
   }));
 
-  const trips = [...liveTrips, ...mockTrips].slice(0, limit);
+  // Real → live convoy → mock (most-recent-first across all sources).
+  const trips = [...realTrips, ...liveTrips, ...mockTrips].slice(0, limit);
 
   // Phase 141 — 12-week rolling cost-efficiency trend. Groups mock trips
   // by ISO week (Monday-based) and computes avg cost/tonne + delay rate
@@ -249,7 +292,8 @@ router.get('/', (req, res) => {
     .sort((a, b) => b.total_usd - a.total_usd);
 
   res.json({
-    count: liveTrips.length + filtered.length,
+    count: realTrips.length + liveTrips.length + filtered.length,
+    real_data_count: realTrips.length,
     hauler_id: haulerId,
     trips,
     cost_per_route: Object.values(byRoute).sort((a, b) => b.trips - a.trips),
@@ -262,11 +306,164 @@ router.get('/', (req, res) => {
   });
 });
 
+// ── LP-22: Manual trip entry ────────────────────────────────────────
+//   POST /api/trips — create a trip manually (axis_admin / axis_ops).
+//   Body: { hauler_id, vehicle_id, direction, origin, destination,
+//           departed_at, arrived_at, tonnage_t, distance_km }
+//   If arrived_at is provided the trip is created as completed immediately.
+router.post('/', requireRole('axis_admin', 'axis_ops'), (req, res) => {
+  const {
+    hauler_id, vehicle_id, driver_id, direction,
+    origin, destination, departed_at, arrived_at,
+    tonnage_t, distance_km,
+  } = req.body || {};
+
+  if (!hauler_id) return res.status(400).json({ error: 'hauler_id is required' });
+
+  try {
+    const trip = tripStore.create({
+      hauler_id,
+      vehicle_id:  vehicle_id  || null,
+      driver_id:   driver_id   || null,
+      direction:   direction   || 'laden',
+      origin:      origin      || null,
+      destination: destination || null,
+      departed_at: departed_at || null,
+      tonnage_t:   tonnage_t   ? Number(tonnage_t)   : null,
+      distance_km: distance_km ? Number(distance_km) : null,
+      source:      'manual',
+    });
+
+    // If arrival time provided, close the trip immediately.
+    if (arrived_at && trip) {
+      const closed = tripStore.close(trip.id, {
+        arrived_at,
+        distance_km: distance_km ? Number(distance_km) : null,
+        tonnage_t:   tonnage_t   ? Number(tonnage_t)   : null,
+      });
+      writeAudit({ req, entity_type: 'trip', entity_id: trip.id, action: 'create', summary: `Manual trip created (completed): ${hauler_id}` });
+      const haulersById = Object.fromEntries(roster.list().map((h) => [h.id, h.display_name]));
+      return res.status(201).json(normaliseDbTrip(closed ?? trip, haulersById));
+    }
+
+    writeAudit({ req, entity_type: 'trip', entity_id: trip.id, action: 'create', summary: `Manual trip started: ${hauler_id}` });
+    const haulersById = Object.fromEntries(roster.list().map((h) => [h.id, h.display_name]));
+    res.status(201).json(normaliseDbTrip(trip, haulersById));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ── LP-22: Trip corrections ─────────────────────────────────────────
+//   PATCH /api/trips/:id — update editable fields on a real DB trip.
+//   Only works on trips sourced from the DB (not mock fixtures).
+router.patch('/:id', requireRole('axis_admin', 'axis_ops'), (req, res) => {
+  const existing = tripStore.findById(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Trip not found or is a mock record' });
+
+  const { tonnage_t, distance_km, duration_min, direction, origin, destination, vehicle_id, driver_id } = req.body || {};
+  try {
+    const updated = tripStore.update(req.params.id, {
+      tonnage_t:    tonnage_t    != null ? Number(tonnage_t)    : undefined,
+      distance_km:  distance_km  != null ? Number(distance_km)  : undefined,
+      duration_min: duration_min != null ? Number(duration_min) : undefined,
+      direction, origin, destination, vehicle_id, driver_id,
+    });
+    writeAudit({ req, entity_type: 'trip', entity_id: req.params.id, action: 'update', summary: `Trip corrected: ${JSON.stringify({ tonnage_t, distance_km, duration_min })}` });
+    const haulersById = Object.fromEntries(roster.list().map((h) => [h.id, h.display_name]));
+    res.json(normaliseDbTrip(updated, haulersById));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ── LP-53: Trip statistics ──────────────────────────────────────────
+//   GET /api/trips/stats — aggregated DB-trip metrics for the ops dashboard.
+//   Hauler admins are scoped to their hauler; AXIS roles see all.
+//   Query params: hauler_id (optional override for AXIS roles)
+router.get('/stats', requireAuth, enforceHaulerScope, (req, res) => {
+  const haulerId = req.query.hauler_id
+    || (req.user?.role === 'hauler_admin' ? req.user.hauler_id : null);
+
+  const where = haulerId
+    ? `WHERE hauler_id = '${String(haulerId).replace(/'/g, "''")}'`
+    : '';
+
+  try {
+    const statsDb = require('../db');
+    const row = statsDb.prepare(`
+      SELECT
+        COUNT(*)                                                  AS total_trips,
+        COUNT(CASE WHEN status = 'completed'  THEN 1 END)        AS completed,
+        COUNT(CASE WHEN status = 'in_progress' THEN 1 END)       AS in_progress,
+        COUNT(CASE WHEN source = 'manual'     THEN 1 END)        AS manual_entries,
+        ROUND(AVG(CASE WHEN status='completed' THEN tonnage_t END), 2) AS avg_tonnage_t,
+        ROUND(SUM(CASE WHEN status='completed' THEN tonnage_t    ELSE 0 END), 1) AS total_tonnage_t,
+        ROUND(AVG(CASE WHEN status='completed' THEN distance_km END), 1) AS avg_distance_km,
+        ROUND(AVG(CASE WHEN status='completed' THEN duration_min END), 1) AS avg_duration_min,
+        ROUND(SUM(COALESCE(estimated_fuel_l, 0)), 1)             AS total_est_fuel_l,
+        ROUND(SUM(COALESCE(estimated_cost_usd, 0)), 2)           AS total_est_cost_usd,
+        MIN(departed_at)                                          AS earliest_trip,
+        MAX(departed_at)                                          AS latest_trip
+      FROM trips ${where}
+    `).get();
+
+    res.json({
+      hauler_id:         haulerId,
+      total_trips:       row.total_trips,
+      completed:         row.completed,
+      in_progress:       row.in_progress,
+      manual_entries:    row.manual_entries,
+      avg_tonnage_t:     row.avg_tonnage_t,
+      total_tonnage_t:   row.total_tonnage_t,
+      avg_distance_km:   row.avg_distance_km,
+      avg_duration_min:  row.avg_duration_min,
+      total_est_fuel_l:  row.total_est_fuel_l,
+      total_est_cost_usd: row.total_est_cost_usd,
+      earliest_trip:     row.earliest_trip,
+      latest_trip:       row.latest_trip,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to compute trip statistics' });
+  }
+});
+
+// ── Live / in-progress trips ────────────────────────────────────────
+//   GET /api/trips/live — returns trips currently in progress from the DB.
+//   Used by the LiveTripFeed widget (LP-20) and the map overlay (LP-17).
+router.get('/live', requireAuth, enforceHaulerScope, (req, res) => {
+  const haulerId = req.query.hauler_id || null;
+  const haulersById = Object.fromEntries(
+    roster.list().map((h) => [h.id, h.display_name]),
+  );
+  try {
+    const { trips: dbTrips } = tripStore.list({
+      hauler_id: haulerId,
+      status:    'in_progress',
+      limit:     200,
+      offset:    0,
+    });
+    const trips = dbTrips.map((t) => normaliseDbTrip(t, haulersById));
+    res.json({ count: trips.length, trips });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch live trips' });
+  }
+});
+
 // ── Detail ─────────────────────────────────────────────────────────
 //   GET /api/trips/:id — full trip detail with synthesised GPS timeline,
 //   weighbridge events for laden runs, assigned rig + driver, and any
 //   alerts whose asset_ref names the trip or whose hauler_id matches.
 router.get('/:id', (req, res) => {
+  // LP-16: real DB trips take precedence over mock fixtures.
+  const dbTrip = tripStore.findById(req.params.id);
+  if (dbTrip) {
+    const haulersById = Object.fromEntries(
+      roster.list().map((h) => [h.id, h.display_name]),
+    );
+    return res.json({ ...normaliseDbTrip(dbTrip, haulersById), timeline: [], weighbridges: [], related_alerts: [] });
+  }
+
   const trip = TRIPS.find((t) => t.id === req.params.id);
   if (!trip) return res.status(404).json({ error: 'Trip not found' });
 
@@ -384,6 +581,78 @@ function buildWeighbridgeEvents(trip) {
         delay_min: overload ? 30 + (seed % 15) : Math.max(0, (seed % 7) - 2),
       };
     });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * LP-52 — Trip CSV export.
+ *
+ * GET /api/trips/export.csv
+ *
+ * Streams real DB trips as CSV. Up to 5,000 rows per export.
+ * Only covers trips sourced from the DB (webhook events, manual
+ * entry, FMS polling) — not the seeded mock fixtures.
+ *
+ * Query params:
+ *   hauler_id — filter to one hauler
+ *   status    — 'completed' | 'in_progress' (default: all)
+ *   since     — ISO timestamp lower bound on departed_at
+ *   until     — ISO timestamp upper bound on departed_at
+ *
+ * Access: axis_admin, axis_ops. Hauler admins use the scoped
+ * /api/trips list instead.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+const _db = require('../db');
+
+router.get('/export.csv', requireRole('axis_admin', 'axis_ops'), (req, res) => {
+  const hauler_id = req.query.hauler_id || null;
+  const status    = req.query.status    || null;
+  const since     = req.query.since     || null;
+  const until     = req.query.until     || null;
+
+  const conditions = [
+    hauler_id ? `hauler_id = '${hauler_id.replace(/'/g, "''")}'`   : null,
+    status    ? `status    = '${status.replace(/'/g, "''")}'`       : null,
+    since     ? `departed_at >= '${since.replace(/'/g, "''")}'`     : null,
+    until     ? `departed_at <= '${until.replace(/'/g, "''")}'`     : null,
+  ].filter(Boolean);
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const rows  = _db.prepare(
+    `SELECT id, hauler_id, vehicle_id, driver_id, status, direction,
+            origin, destination, departed_at, arrived_at, duration_min,
+            distance_km, tonnage_t, axle_load_pct,
+            estimated_fuel_l, estimated_cost_usd, convoy_id, source, created_at
+     FROM trips ${where}
+     ORDER BY departed_at DESC
+     LIMIT 5000`,
+  ).all();
+
+  const datePart = new Date().toISOString().slice(0, 10);
+  const filename = `axis-trips${hauler_id ? `-${hauler_id}` : ''}-${datePart}.csv`;
+
+  res.setHeader('Content-Type',        'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.write('﻿'); // UTF-8 BOM for Excel
+
+  const cols = [
+    'id', 'hauler_id', 'vehicle_id', 'driver_id', 'status', 'direction',
+    'origin', 'destination', 'departed_at', 'arrived_at', 'duration_min',
+    'distance_km', 'tonnage_t', 'axle_load_pct',
+    'estimated_fuel_l', 'estimated_cost_usd', 'convoy_id', 'source', 'created_at',
+  ];
+  res.write(cols.join(',') + '\n');
+
+  for (const r of rows) {
+    res.write(cols.map((c) => csvCell(r[c])).join(',') + '\n');
+  }
+  res.end();
+});
+
+function csvCell(value) {
+  const s = String(value ?? '');
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
 }
 
 module.exports = router;

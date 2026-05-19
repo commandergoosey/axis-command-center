@@ -11,6 +11,8 @@
  * POST /api/auth/request-reset   { email }    → { ok }         (admin-less reset flow)
  * POST /api/auth/reset-password  { token, new_password }       → { ok }
  *
+ * GET  /api/auth/sessions          → list own active sessions
+ * DELETE /api/auth/sessions/:prefix → revoke one session
  * GET  /api/auth/demo  — returns quick-login hints for dev/staging only.
  *                         Disabled in NODE_ENV=production.
  */
@@ -20,6 +22,7 @@ const router  = express.Router();
 
 const users    = require('../state/users');
 const sessions = require('../services/sessions');
+const mailer   = require('../services/mailer');
 const { requireAuth } = require('../middleware/auth');
 const { writeAudit }  = require('../db/audit');
 
@@ -103,7 +106,7 @@ router.post('/change-password', requireAuth, (req, res) => {
   res.json({ ok: true, token, expires_at });
 });
 
-/* ── Request a password reset (sends token; LP-5 will wire email) ───── */
+/* ── Request a password reset ───────────────────────────────────────── */
 router.post('/request-reset', (req, res) => {
   const { email } = req.body || {};
   if (!email) return res.status(400).json({ error: 'email is required' });
@@ -114,9 +117,9 @@ router.post('/request-reset', (req, res) => {
 
   if (u) {
     const resetToken = users.createResetToken(u.id);
-    // LP-5 will call the email service here.
-    // For now, log it so admins can retrieve it from the audit log / server logs.
-    console.log(`[auth] Password reset token for ${u.email}: ${resetToken} (expires 1 h)`);
+    mailer.sendPasswordReset(u, resetToken).catch((err) => {
+      console.error('[auth] Failed to send reset email:', err.message);
+    });
     writeAudit({
       req: { user: users.publicShape(u) },
       entity_type: 'auth',
@@ -175,20 +178,32 @@ router.get('/users', requireAuth, (_req, res) => {
 });
 
 /* ── Demo account list — dev/staging only ───────────────────────────── */
+/* ── LP-19: Session management — own account ───────────────────────
+ * GET    /api/auth/sessions          → list current user's active sessions
+ * DELETE /api/auth/sessions/:prefix  → revoke one session by token prefix
+ */
+
+router.get('/sessions', requireAuth, (req, res) => {
+  const active = sessions.list(req.user.id);
+  res.json({ sessions: active });
+});
+
+router.delete('/sessions/:prefix', requireAuth, (req, res) => {
+  const prefix = req.params.prefix;
+  if (!prefix || prefix.length < 8) return res.status(400).json({ error: 'Invalid token prefix' });
+
+  const { ok, user_id } = sessions.revokeByPrefix(prefix);
+  if (!ok) return res.status(404).json({ error: 'Session not found' });
+  if (user_id !== req.user.id) return res.status(403).json({ error: 'Not your session' });
+
+  res.json({ ok: true });
+});
+
 router.get('/demo', (_req, res) => {
   if (PROD) {
     return res.status(404).json({ error: 'Not found' });
   }
-  // Return role/org info only — no password hints exposed.
-  res.json({
-    accounts: users.DEMO_USERS.map((u) => ({
-      email:        u.email,
-      display_name: u.display_name,
-      role:         u.role,
-      organisation: u.organisation,
-      hauler_id:    u.hauler_id,
-    })),
-  });
+  res.json({ accounts: users.DEMO_USERS });
 });
 
 module.exports = router;

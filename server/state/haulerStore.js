@@ -79,8 +79,10 @@ function deserialise(row) {
       sla_attainment_pct: row.sla_attainment_pct,
       safety_score:       row.safety_score,
     },
-    run_rate:   row.run_rate,
-    _persisted: true,   // sentinel kept for backward-compat with existing callers
+    run_rate:       row.run_rate,
+    webhook_secret: row.webhook_secret ?? null,  // LP-7 — only visible server-side
+    api_token:      row.api_token      ?? null,  // LP-36 / LP-51 — hauler integration auth
+    _persisted:     true,   // sentinel kept for backward-compat with existing callers
   };
 }
 
@@ -208,6 +210,8 @@ const UPDATE_COLS = {
   contract_share_pct:  { col: 'contract_share_pct', coerce: (v) => v         ?? null },
   planned_start_date:  { col: 'planned_start_date', coerce: (v) => v         ?? null },
   activated_at:        { col: 'activated_at' },
+  webhook_secret:      { col: 'webhook_secret' },   // LP-7
+  api_token:           { col: 'api_token' },        // LP-51
 };
 
 /**

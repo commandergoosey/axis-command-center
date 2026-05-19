@@ -60,6 +60,15 @@ const stmts = {
     UPDATE fleet_drivers SET assigned_rig_id = NULL, assigned_plate = NULL, updated_at = ?
     WHERE assigned_rig_id = ?
   `),
+  // LP-39: increment trips_this_week and hours_this_week on trip completion.
+  bumpScorecard: db.prepare(`
+    UPDATE fleet_drivers
+    SET trips_this_week = trips_this_week + @trips_delta,
+        hours_this_week = ROUND(hours_this_week + @hours_delta, 2),
+        rest_status     = @rest_status,
+        updated_at      = @now
+    WHERE id = @id AND archived = 0
+  `),
 };
 
 /* ── Enrich a row with computed fields ───────────────────────────── */
@@ -215,4 +224,29 @@ function clearRigAssignment(rigId) {
   stmts.clearAssignment.run(new Date().toISOString(), rigId);
 }
 
-module.exports = { list, findById, findByRig, create, update, archive, unarchive, syncAssignment, clearRigAssignment };
+/**
+ * LP-39 — Bump a driver's weekly scorecard counters on trip completion.
+ * @param {string} driverId
+ * @param {{ duration_min?: number }} tripFields — completed trip fields
+ */
+function updateScorecard(driverId, tripFields) {
+  if (!driverId) return;
+  const hoursThisWeek = (findById(driverId)?.hours_this_week ?? 0)
+    + ((tripFields.duration_min ?? 0) / 60);
+  const REST_CAP_H = 60;
+  const rest_status = hoursThisWeek >= REST_CAP_H        ? 'breach'
+                    : hoursThisWeek >= REST_CAP_H * 0.85  ? 'warning'
+                    : 'compliant';
+  stmts.bumpScorecard.run({
+    id:          driverId,
+    trips_delta: 1,
+    hours_delta: Number(((tripFields.duration_min ?? 0) / 60).toFixed(4)),
+    rest_status,
+    now:         new Date().toISOString(),
+  });
+}
+
+module.exports = {
+  list, findById, findByRig, create, update, archive, unarchive,
+  syncAssignment, clearRigAssignment, updateScorecard,
+};

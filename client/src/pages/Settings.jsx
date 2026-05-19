@@ -16,7 +16,8 @@ import BroadcastsPanel from '../components/settings/BroadcastsPanel';
 import IntegrationHealthPanel from '../components/settings/IntegrationHealthPanel';
 import UserManagementPanel from '../components/settings/UserManagementPanel';
 import HaulerManagementPanel from '../components/settings/HaulerManagementPanel';
-
+import NotificationPrefsPanel from '../components/settings/NotificationPrefsPanel';
+import WebhookEventsPanel     from '../components/settings/WebhookEventsPanel';
 
 function fmtSync(iso) {
   if (!iso) return '—';
@@ -66,6 +67,10 @@ export default function Settings() {
           label="Settings is restricted to AXIS Admin"
           note="Your role does not have access to this surface. Sign in as an AXIS Admin to view user directory and integration credentials."
         />
+        {/* LP-20 — notification prefs are personal; visible to all roles */}
+        <div style={{ marginTop: 'var(--space-4)' }}>
+          <NotificationPrefsPanel />
+        </div>
       </PageShell>
     );
   }
@@ -87,6 +92,8 @@ export default function Settings() {
         <BroadcastsPanel />
         <IntegrationsPanel integrations={data?.integrations ?? []} />
         <IntegrationHealthPanel haulers={data?.integrations ?? []} />
+        <NotificationPrefsPanel />
+        <WebhookEventsPanel />
         <AuditPanel />
         <IntelligencePanel page="settings" />
       </div>

@@ -9,6 +9,7 @@
 
 import { authFetch } from '../lib/auth';
 import { useAuth }   from '../lib/AuthContext';
+import useEventStream from '../lib/useEventStream';
 
 import { useCallback, useEffect, useState } from 'react';
 
@@ -65,6 +66,12 @@ export default function Today() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // LP-25 — SSE: refresh the briefing when a trip completes or an alert fires.
+  useEventStream({
+    onTripCompleted: () => load(),
+    onAlert:         () => load(),
+  });
 
   return (
     <div

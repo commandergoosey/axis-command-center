@@ -17,9 +17,12 @@
 const express = require('express');
 const router = express.Router();
 
-const { requireAuth } = require('../middleware/auth');
-const lenderPack = require('../services/lenderPack');
-const { writeAudit } = require('../db/audit');
+const { requireAuth, requireRole } = require('../middleware/auth');
+const lenderPack       = require('../services/lenderPack');
+const { buildCovenants } = require('../services/covenants');
+const dscrService      = require('../services/dscr');
+const roster           = require('../state/roster');
+const { writeAudit }   = require('../db/audit');
 
 router.get('/pack', requireAuth, (req, res) => {
   const generatedBy = req.user ? {
@@ -48,6 +51,44 @@ router.get('/pack', requireAuth, (req, res) => {
   });
 
   res.json(pack);
+});
+
+/* ── LP-44 — Lender covenant monitoring ─────────────────────────── */
+//
+// GET /api/lender/covenants
+//
+// Returns live covenant status and DSCR series so the lender can
+// check compliance posture without generating a full pack. All
+// authenticated roles can read (same as the pack endpoint).
+
+router.get('/covenants', requireAuth, (req, res) => {
+  const haulers   = roster.list();
+  const now       = new Date();
+  const covenants = buildCovenants(haulers, now);
+  const dscr      = dscrService.compute(haulers, now);
+
+  const breaches  = covenants.filter((c) => c.status === 'breach');
+  const watches   = covenants.filter((c) => c.status === 'watch');
+
+  writeAudit({
+    req,
+    entity_type: 'lender_covenants',
+    entity_id:   new Date().toISOString().slice(0, 10),
+    action:      'read',
+    summary:     `Covenants read: ${breaches.length} breach, ${watches.length} watch`,
+  });
+
+  res.json({
+    generated_at:   new Date().toISOString(),
+    dscr:           dscr,
+    covenants,
+    summary: {
+      total:         covenants.length,
+      compliant:     covenants.filter((c) => c.status === 'compliant').length,
+      watch:         watches.length,
+      breach:        breaches.length,
+    },
+  });
 });
 
 module.exports = router;

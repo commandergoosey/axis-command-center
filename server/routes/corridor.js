@@ -17,6 +17,8 @@ const { WAYPOINTS, SEGMENTS, CONDITIONS, ACTIVE_CONVOYS } = require('../mock/cor
 const { CONTRACT }   = require('../services/aggregator');
 const roster         = require('../state/roster');
 const advisories     = require('../state/corridorAdvisories');
+const positionStore  = require('../state/positionStore');
+const healthScorer   = require('../services/healthScorer');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { writeAudit } = require('../db/audit');
 
@@ -44,31 +46,55 @@ router.get('/', (_req, res) => {
     ? liveAdvisories
     : mockAdvisories;
 
-  // Phase 147 — synthetic 30-day corridor health score history.
-  // Seeded deterministically by day-of-year so the chart is stable
-  // across requests but still shows realistic variation. A real
-  // implementation would store these in the DB as they are computed.
-  function seeded(n) {
+  // LP-24 — 30-day corridor health score history.
+  // Uses real computed scores where available; fills gaps with a seeded
+  // deterministic fallback so the chart is never empty during early deployment.
+  function seededScore(n) {
     const x = Math.sin(n * 9301 + 49297) * 233280;
     return x - Math.floor(x);
   }
   const today = new Date();
   const BASE_SCORE = 72;
-  const health_history = [];
+
+  // Build the 30-day date range.
+  const dateRange = [];
   for (let d = 29; d >= 0; d--) {
     const date = new Date(Date.UTC(
       today.getUTCFullYear(),
       today.getUTCMonth(),
       today.getUTCDate() - d,
     ));
-    const doy = Math.floor((date - new Date(Date.UTC(date.getUTCFullYear(), 0, 0))) / 86_400_000);
-    const score = Math.min(100, Math.max(42, Math.round(BASE_SCORE + seeded(doy) * 22 - 11)));
-    health_history.push({
-      date:  date.toISOString().slice(0, 10),
+    dateRange.push(date.toISOString().slice(0, 10));
+  }
+
+  // Fetch real stored scores for the window.
+  const fromDate = dateRange[0];
+  const toDate   = dateRange[dateRange.length - 1];
+  const realRows = healthScorer.getRange(fromDate, toDate);
+  const realByDate = Object.fromEntries(realRows.map((r) => [r.date, r]));
+
+  const health_history = dateRange.map((iso) => {
+    if (realByDate[iso]) {
+      const r = realByDate[iso];
+      return {
+        date:    r.date,
+        score:   r.score,
+        verdict: r.score >= 75 ? 'STRONG' : r.score >= 60 ? 'WATCH' : 'BELOW',
+        real:    true,
+      };
+    }
+    // Seeded fallback for dates not yet scored.
+    const doy = Math.floor(
+      (new Date(iso) - new Date(Date.UTC(new Date(iso).getUTCFullYear(), 0, 0))) / 86_400_000,
+    );
+    const score = Math.min(100, Math.max(42, Math.round(BASE_SCORE + seededScore(doy) * 22 - 11)));
+    return {
+      date:    iso,
       score,
       verdict: score >= 75 ? 'STRONG' : score >= 60 ? 'WATCH' : 'BELOW',
-    });
-  }
+      real:    false,
+    };
+  });
 
   // Phase 172 — 4-week corridor throughput forecast: base / optimistic / conservative.
   // Anchored to the most recent week's corridor health score as a proxy for
@@ -134,6 +160,14 @@ router.get('/', (_req, res) => {
       return { id: w.id, label: w.label, km: w.km, kind: w.kind, avg_min, modelled: true };
     });
 
+  // LP-17 — real GPS positions from the FMS poller / webhook pipeline.
+  // Returns an array of { vehicle_id, hauler_id, latitude, longitude,
+  // speed_kmh, heading_deg, position_at } objects, one per known vehicle.
+  // Empty until the FMS poller has run at least once or a position webhook
+  // has been received.
+  let vehicle_positions = [];
+  try { vehicle_positions = positionStore.all(); } catch (_) {}
+
   res.json({
     corridor: {
       name:         'Nyinahin–Takoradi',
@@ -144,6 +178,7 @@ router.get('/', (_req, res) => {
     segments:      SEGMENTS,
     conditions:    { ...CONDITIONS, advisories: mergedAdvisories },
     active_convoys: activeConvoys,
+    vehicle_positions,
     health_history,
     throughput_forecast,
     segment_util,
@@ -238,5 +273,181 @@ router.delete(
     res.json({ deleted: true });
   },
 );
+
+/* ── LP-41 — Corridor benchmark targets ──────────────────────────── */
+//
+// GET  /api/corridor/benchmarks       — list all benchmark rows
+// PUT  /api/corridor/benchmarks/:key  — upsert a benchmark by key
+//
+// Uses the corridor_benchmarks table created in migration-008.
+// Examples: cycle_time_max_h, on_time_rate_min, payload_util_min.
+
+const db = require('../db');
+
+let _bmStmts = null;
+function bmStmts() {
+  if (!_bmStmts) {
+    _bmStmts = {
+      list:   db.prepare('SELECT * FROM corridor_benchmarks ORDER BY key'),
+      upsert: db.prepare(`
+        INSERT INTO corridor_benchmarks (key, value, unit, label, updated_at)
+        VALUES (@key, @value, @unit, @label, @updated_at)
+        ON CONFLICT(key) DO UPDATE SET
+          value      = excluded.value,
+          unit       = excluded.unit,
+          label      = excluded.label,
+          updated_at = excluded.updated_at
+      `),
+      byKey:  db.prepare('SELECT * FROM corridor_benchmarks WHERE key = ?'),
+      delete: db.prepare('DELETE FROM corridor_benchmarks WHERE key = ?'),
+    };
+  }
+  return _bmStmts;
+}
+
+// Default benchmark seeds (written if table is empty on first read).
+const DEFAULT_BENCHMARKS = [
+  { key: 'cycle_time_max_h',  value: 26,   unit: 'h',   label: 'Max cycle time (laden + return)' },
+  { key: 'on_time_rate_min',  value: 0.80, unit: 'ratio', label: 'Minimum on-time delivery rate' },
+  { key: 'payload_util_min',  value: 0.85, unit: 'ratio', label: 'Minimum payload utilisation' },
+  { key: 'speed_max_kmh',     value: 80,   unit: 'km/h', label: 'Maximum permitted speed' },
+  { key: 'idle_max_min',      value: 30,   unit: 'min',  label: 'Maximum engine idle time' },
+];
+
+function seedBenchmarks() {
+  try {
+    const stmts = bmStmts();
+    const existing = stmts.list.all();
+    if (existing.length === 0) {
+      const now = new Date().toISOString();
+      for (const b of DEFAULT_BENCHMARKS) {
+        stmts.upsert.run({ ...b, updated_at: now });
+      }
+    }
+  } catch (_) {}
+}
+setImmediate(seedBenchmarks);
+
+router.get('/benchmarks', (req, res) => {
+  try {
+    const rows = bmStmts().list.all();
+    res.json({ benchmarks: rows, count: rows.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Benchmarks table not available — run migrations' });
+  }
+});
+
+router.put(
+  '/benchmarks/:key',
+  requireRole('axis_admin', 'axis_ops'),
+  (req, res) => {
+    const { key } = req.params;
+    const { value, unit, label } = req.body ?? {};
+    if (value == null) return res.status(400).json({ error: 'value (number) is required' });
+    if (!Number.isFinite(Number(value))) return res.status(400).json({ error: 'value must be a finite number' });
+
+    bmStmts().upsert.run({
+      key,
+      value:      Number(value),
+      unit:       unit   ?? null,
+      label:      label  ?? null,
+      updated_at: new Date().toISOString(),
+    });
+    writeAudit({
+      req,
+      entity_type: 'corridor_benchmark',
+      entity_id:   key,
+      action:      'upsert',
+      summary:     `Benchmark "${key}" set to ${value}${unit ? ' ' + unit : ''}`,
+      payload:     { key, value, unit, label },
+    });
+    const row = bmStmts().byKey.get(key);
+    res.json({ benchmark: row });
+  },
+);
+
+router.delete(
+  '/benchmarks/:key',
+  requireRole('axis_admin'),
+  (req, res) => {
+    const { key } = req.params;
+    const existing = bmStmts().byKey.get(key);
+    if (!existing) return res.status(404).json({ error: 'Benchmark not found' });
+    bmStmts().delete.run(key);
+    writeAudit({
+      req, entity_type: 'corridor_benchmark', entity_id: key,
+      action: 'delete', summary: `Deleted benchmark "${key}"`,
+    });
+    res.json({ deleted: true });
+  },
+);
+
+/* ── LP-49 — Corridor segment utilization ────────────────────────── */
+//
+// GET /api/corridor/utilization
+//
+// Maps live vehicle positions to the nearest corridor segment and
+// counts vehicles per segment. Returns segment-level occupancy
+// with the percentage of total active fleet for each segment.
+
+router.get('/utilization', (_req, res) => {
+  const positions = positionStore.all();
+  const activePos = positions.filter((p) => {
+    if (!p.position_at) return false;
+    const ageMs = Date.now() - new Date(p.position_at).getTime();
+    return ageMs < 3 * 3_600_000; // only positions updated in last 3h
+  });
+
+  // Corridor segments with km markers (Nyinahin = 0, Takoradi = 300).
+  // Approximate lat/lon range per segment for a simple assignment.
+  const segmentMap = {};
+  for (const seg of SEGMENTS) {
+    segmentMap[seg.id] = { ...seg, vehicle_count: 0, vehicles: [] };
+  }
+
+  // Assign each active position to the closest segment by latitude proxy.
+  // Nyinahin lat ≈ 6.83 (km 0) → Takoradi lat ≈ 4.89 (km 300).
+  const LAT_NORTH = 6.83;
+  const LAT_SOUTH = 4.89;
+  const LAT_RANGE = LAT_NORTH - LAT_SOUTH;
+
+  for (const pos of activePos) {
+    if (pos.latitude == null) continue;
+    const fraction = Math.max(0, Math.min(1, (LAT_NORTH - pos.latitude) / LAT_RANGE));
+    const kmApprox = Math.round(fraction * 300);
+
+    // Find segment that contains this km marker.
+    const seg = SEGMENTS.find(
+      (s) => kmApprox >= (s.km_from ?? 0) && kmApprox < (s.km_to ?? 300),
+    ) ?? SEGMENTS[SEGMENTS.length - 1];
+
+    if (seg && segmentMap[seg.id]) {
+      segmentMap[seg.id].vehicle_count++;
+      segmentMap[seg.id].vehicles.push({
+        vehicle_id: pos.vehicle_id,
+        hauler_id:  pos.hauler_id,
+        speed_kmh:  pos.speed_kmh,
+        position_at: pos.position_at,
+      });
+    }
+  }
+
+  const total = activePos.length || 1;
+  const segments = Object.values(segmentMap).map((seg) => ({
+    id:            seg.id,
+    name:          seg.name,
+    km_from:       seg.km_from,
+    km_to:         seg.km_to,
+    vehicle_count: seg.vehicle_count,
+    utilization_pct: Number(((seg.vehicle_count / total) * 100).toFixed(1)),
+    vehicles:      seg.vehicles,
+  }));
+
+  res.json({
+    generated_at:   new Date().toISOString(),
+    total_active:   activePos.length,
+    segments,
+  });
+});
 
 module.exports = router;

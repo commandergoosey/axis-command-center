@@ -23,6 +23,7 @@ import TripCostBreakdownChart from '../components/trips/TripCostBreakdownChart';
 import TripsTable from '../components/trips/TripsTable';
 import TripDetail from '../components/trips/TripDetail';
 import IntelligencePanel from '../components/intelligence/IntelligencePanel';
+import LiveTripFeed from '../components/trips/LiveTripFeed';
 
 const ROUTE_OPTIONS = [
   ['',           'All routes'],
@@ -106,6 +107,9 @@ export default function Trips() {
           Trip feed unavailable — {error}
         </div>
       )}
+
+      {/* LP-20 — live in-progress trips from real FMS/webhook data */}
+      <LiveTripFeed haulerId={haulerId} />
 
       <SummaryStrip
         count={data?.count}

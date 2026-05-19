@@ -76,6 +76,7 @@ import Compliance from './pages/Compliance';
 import Haulers from './pages/Haulers';
 import Fleet from './pages/Fleet';
 import Maintenance from './pages/Maintenance';
+import Devices from './pages/Devices';
 import Contract from './pages/Contract';
 import Tariff from './pages/Tariff';
 import Diesel from './pages/Diesel';
@@ -103,6 +104,7 @@ import HaulerScorecard from './pages/HaulerScorecard';
 import DriverScorecard from './pages/DriverScorecard';
 import LenderPack from './pages/LenderPack';
 import Login from './pages/Login';
+import ResetPassword from './pages/ResetPassword';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { canAccess } from './lib/auth';
 
@@ -138,6 +140,7 @@ function Shell() {
           <Route path="/haulers"       element={<Guard path="/haulers"><Haulers /></Guard>} />
           <Route path="/fleet"         element={<Guard path="/fleet"><Fleet /></Guard>} />
           <Route path="/maintenance"   element={<Guard path="/maintenance"><Maintenance /></Guard>} />
+          <Route path="/devices"       element={<Guard path="/devices"><Devices /></Guard>} />
           <Route path="/contract"      element={<Guard path="/contract"><Contract /></Guard>} />
           <Route path="/tariff"        element={<Guard path="/tariff"><Tariff /></Guard>} />
           <Route path="/diesel"        element={<Guard path="/diesel"><Diesel /></Guard>} />
@@ -204,10 +207,10 @@ function Gate() {
   }
 
   if (!user) {
-    // Preserve the path the user tried to reach so we can restore post-login.
+    // Unauthenticated: allow reset-password flow; everything else → Login.
     return <Routes>
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="*" element={<Login />} />
-      <Route path="/" element={<Login />} />
     </Routes>;
   }
 
@@ -221,6 +224,7 @@ function Gate() {
       <Route path="/haulers/:id/scorecard" element={<HaulerScorecard />} />
       <Route path="/drivers/:id/scorecard" element={<DriverScorecard />} />
       <Route path="/lender/pack" element={<LenderPack />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="*" element={<Shell key={loc.pathname === '/login' ? 'home' : 'shell'} />} />
     </Routes>
   );
