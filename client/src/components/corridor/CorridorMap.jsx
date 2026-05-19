@@ -25,6 +25,7 @@ L.Icon.Default.mergeOptions({
 
 const RUST     = '#A23E23';
 const AMBER    = '#B45309';
+const GREEN    = '#16A34A';
 const IRON     = '#6B6763';
 const CHARCOAL = '#1F1F1F';
 
@@ -111,6 +112,22 @@ function waypointIcon(kind) {
   return L.divIcon({ html, iconSize: [s + 4, s + 4], iconAnchor: [(s + 4) / 2, (s + 4) / 2], className: '' });
 }
 
+// GPS device marker — square to visually distinguish from round convoy dots.
+function deviceIcon(lastSeenAt) {
+  const minsAgo = lastSeenAt
+    ? (Date.now() - new Date(lastSeenAt).getTime()) / 60_000
+    : Infinity;
+  const color = minsAgo < 5 ? GREEN : minsAgo < 30 ? AMBER : RUST;
+  const html = `<div style="
+    width:8px;height:8px;
+    background:${color};
+    border:2px solid white;
+    border-radius:2px;
+    box-shadow:0 0 0 1.5px ${color}99,0 1px 3px rgba(0,0,0,.4);
+  "></div>`;
+  return L.divIcon({ html, iconSize: [12, 12], iconAnchor: [6, 6], className: '' });
+}
+
 function convoyIcon(onSchedule) {
   const color = onSchedule ? RUST : AMBER;
   const html = `<div style="
@@ -123,10 +140,10 @@ function convoyIcon(onSchedule) {
   return L.divIcon({ html, iconSize: [14, 14], iconAnchor: [7, 7], className: '' });
 }
 
-export default function CorridorMap({ waypoints, convoys }) {
+export default function CorridorMap({ waypoints, convoys, devices = [] }) {
   const containerRef = useRef(null);
   const mapRef       = useRef(null);
-  const layersRef    = useRef({ waypoints: [], convoys: [], route: null });
+  const layersRef    = useRef({ waypoints: [], convoys: [], devices: [], route: null });
 
   // ── Initialise map once ────────────────────────────────────────────────
   useEffect(() => {
@@ -246,8 +263,61 @@ export default function CorridorMap({ waypoints, convoys }) {
     layersRef.current.convoys = markers;
   }, [waypoints, convoys]);
 
+  // ── GPS device layer — real lat/lng from MQTT telematics ──────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    layersRef.current.devices.forEach((l) => map.removeLayer(l));
+    layersRef.current.devices = [];
+
+    const positioned = devices.filter(
+      (d) => d.active && d.last_position?.latitude != null && d.last_position?.longitude != null,
+    );
+    if (!positioned.length) return;
+
+    const markers = positioned.map((d) => {
+      const pos  = [d.last_position.latitude, d.last_position.longitude];
+      const hbAt = d.health?.last_seen_at ?? null;
+      const m    = L.marker(pos, { icon: deviceIcon(hbAt), zIndexOffset: 300 }).addTo(map);
+
+      const speed   = d.last_position.speed_kmh != null ? `${d.last_position.speed_kmh} km/h` : '—';
+      const posAt   = d.last_position.position_at
+        ? new Date(d.last_position.position_at).toLocaleTimeString()
+        : '—';
+      const minsAgo = hbAt
+        ? Math.round((Date.now() - new Date(hbAt).getTime()) / 60_000)
+        : null;
+      const seenStr = minsAgo == null ? '—'
+        : minsAgo < 1  ? 'Just now'
+        : `${minsAgo}m ago`;
+
+      m.bindPopup(
+        `<div style="font-family:sans-serif;font-size:12px;min-width:160px;">
+          <div style="font-weight:600;color:${CHARCOAL};margin-bottom:3px;">${d.vehicle_id ?? d.imei}</div>
+          <div style="color:${IRON};font-size:11px;margin-bottom:5px;">${d.hauler_id ?? 'Unassigned'} · GPS</div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;color:${CHARCOAL};">
+            <tr><td style="padding:1px 0;color:${IRON};">Speed</td><td style="text-align:right;">${speed}</td></tr>
+            <tr><td style="padding:1px 0;color:${IRON};">Position at</td><td style="text-align:right;">${posAt}</td></tr>
+            <tr><td style="padding:1px 0;color:${IRON};">Last seen</td><td style="text-align:right;">${seenStr}</td></tr>
+            <tr><td style="padding:1px 0;color:${IRON};">IMEI</td><td style="text-align:right;font-family:monospace;font-size:10px;">${d.imei}</td></tr>
+          </table>
+        </div>`,
+        { maxWidth: 240, className: 'axis-popup' },
+      );
+      return m;
+    });
+
+    layersRef.current.devices = markers;
+  }, [devices]);
+
   const onSchedule = convoys?.filter((c) => c.on_schedule).length ?? 0;
   const total      = convoys?.length ?? 0;
+  const gpsOnline  = devices.filter(
+    (d) => d.active && d.last_position?.latitude != null
+      && d.health?.last_seen_at
+      && (Date.now() - new Date(d.health.last_seen_at).getTime()) < 30 * 60_000,
+  ).length;
 
   return (
     <div style={{
@@ -265,16 +335,21 @@ export default function CorridorMap({ waypoints, convoys }) {
         <div>
           <div className="eyebrow">Corridor map</div>
           <div style={{ fontSize: 'var(--ts-body-sm-size)', color: 'var(--text-secondary)', marginTop: 2 }}>
-            Nyinahin–Takoradi · 300 km · convoy positions interpolated from km marker
+            Nyinahin–Takoradi · 300 km · convoy positions from km marker · GPS squares from live MQTT
           </div>
         </div>
 
         {/* Legend */}
-        <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 'var(--space-4)', alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <LegendItem color={RUST}  label={`${onSchedule} on time`} dot />
           <LegendItem color={AMBER} label={`${total - onSchedule} delayed`} dot />
           <LegendItem color={CHARCOAL} label="Depot" square />
           <LegendItem color={RUST}    label="Weighbridge" diamond />
+          {devices.length > 0 && <>
+            <div style={{ width: 1, height: 14, background: 'var(--border-hairline)', margin: '0 4px' }} />
+            <LegendItem color={GREEN} label={`${gpsOnline} GPS live`}  squareSm />
+            <LegendItem color={RUST}  label="GPS offline" squareSm />
+          </>}
         </div>
       </div>
 
@@ -287,11 +362,12 @@ export default function CorridorMap({ waypoints, convoys }) {
   );
 }
 
-function LegendItem({ color, label, dot, square, diamond }) {
+function LegendItem({ color, label, dot, square, squareSm, diamond }) {
   let shapeStyle = {};
-  if (dot)     shapeStyle = { width: 9, height: 9, borderRadius: '50%', background: color, flexShrink: 0 };
-  if (square)  shapeStyle = { width: 9, height: 9, borderRadius: 1, background: color, flexShrink: 0 };
-  if (diamond) shapeStyle = { width: 8, height: 8, background: color, transform: 'rotate(45deg)', borderRadius: 1, flexShrink: 0 };
+  if (dot)      shapeStyle = { width: 9, height: 9, borderRadius: '50%', background: color, flexShrink: 0 };
+  if (square)   shapeStyle = { width: 9, height: 9, borderRadius: 1, background: color, flexShrink: 0 };
+  if (squareSm) shapeStyle = { width: 7, height: 7, borderRadius: 1.5, background: color, flexShrink: 0 };
+  if (diamond)  shapeStyle = { width: 8, height: 8, background: color, transform: 'rotate(45deg)', borderRadius: 1, flexShrink: 0 };
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>

@@ -28,6 +28,7 @@ export default function Corridor() {
   const [mode, setMode]       = useState('schematic');
   const [data, setData]       = useState(null);
   const [error, setError]     = useState(null);
+  const [devices, setDevices] = useState([]);
 
   const load = useCallback(async () => {
     try {
@@ -42,6 +43,13 @@ export default function Corridor() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Fetch live device positions for the GPS layer on the corridor map.
+  useEffect(() => {
+    authFetch('/api/devices?limit=500')
+      .then((r) => r.ok ? r.json() : { devices: [] })
+      .then((d) => setDevices(d.devices ?? []));
+  }, []);
 
   return (
     <PageShell
@@ -78,6 +86,7 @@ export default function Corridor() {
           key={data?.waypoints?.length ?? 0}
           waypoints={data?.waypoints}
           convoys={data?.active_convoys}
+          devices={devices}
         />
       )}
 
