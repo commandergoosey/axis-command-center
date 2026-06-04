@@ -1,0 +1,21 @@
+{
+  "name": "@axis/telematics-core",
+  "version": "0.1.0",
+  "description": "Device-to-dashboard telematics ingestion module — Teltonika MQTT + Escort fuel rods",
+  "main": "index.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node test/harness.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.9.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mqtt": "^5.3.4"
+  }
+}
