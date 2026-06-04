@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+#
+# If any files inside packages/telematics-core/ are staged, automatically
+# re-sync the vendored copy at server/packages/telematics-core/ and re-stage it.
+#
+# Activate once per clone:
+#   git config core.hooksPath .githooks
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+SRC="${REPO_ROOT}/packages/telematics-core"
+DST="${REPO_ROOT}/server/packages/telematics-core"
+
+# Check whether any file under packages/telematics-core/ is staged.
+if git diff --cached --name-only | grep -q '^packages/telematics-core/'; then
+  echo "[pre-commit] packages/telematics-core changed — syncing vendored copy…"
+
+  rsync -a --delete \
+    --exclude='node_modules' \
+    --exclude='.git' \
+    --exclude='certs' \
+    --exclude='emqx' \
+    --exclude='docker-compose.emqx.yml' \
+    --exclude='gen-certs.sh' \
+    --exclude='AXIS_INTEGRATION.md' \
+    "${SRC}/" "${DST}/"
+
+  # Regenerate the server lock file so the vendored path stays consistent.
+  (cd "${REPO_ROOT}/server" && npm install --package-lock-only --silent)
+
+  # Stage the updated vendored copy and lock file.
+  git add "${DST}" "${REPO_ROOT}/server/package-lock.json"
+
+  echo "[pre-commit] vendored copy updated and staged ✓"
+fi
