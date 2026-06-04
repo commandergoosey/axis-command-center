@@ -31,9 +31,9 @@ function alertId(ruleId, vehicleId, haulerIdFallback) {
 
 const stmtInsert = db.prepare(`
   INSERT OR IGNORE INTO alert_state
-    (alert_id, status_override, notes_json, updated_at)
+    (alert_id, status_override, notes_json, updated_at, severity, rule_id, vehicle_id, hauler_id)
   VALUES
-    (@alert_id, 'open', '[]', @updated_at)
+    (@alert_id, 'NEEDS_ACTION', '[]', @updated_at, @severity, @rule_id, @vehicle_id, @hauler_id)
 `);
 
 /**
@@ -65,7 +65,14 @@ function evaluate({ rule_type, value, hauler_id, vehicle_id, meta = {} }) {
     ].filter(Boolean).join(' · ');
 
     try {
-      const result = stmtInsert.run({ alert_id: aid, updated_at: ts });
+      const result = stmtInsert.run({
+        alert_id:   aid,
+        updated_at: ts,
+        severity:   rule.severity,
+        rule_id:    rule.id,
+        vehicle_id: vehicle_id ?? null,
+        hauler_id:  hauler_id  ?? null,
+      });
 
       if (result.changes > 0) {
         // Newly opened alert — log and dispatch notification.

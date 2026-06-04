@@ -47,7 +47,8 @@ function alertById(id) {
 // swallow alerts forever.
 function merge(alert) {
   const st = alertState.getState(alert.id);
-  let status = st.status_override ?? alert.status;
+  const rawOverride = st.status_override === 'open' ? 'NEEDS_ACTION' : st.status_override;
+  let status = rawOverride ?? alert.status;
   if (status === 'SNOOZED' && st.snooze_until_iso) {
     if (Date.now() >= new Date(st.snooze_until_iso).getTime()) {
       status = alert.status; // snooze expired — revert to baseline

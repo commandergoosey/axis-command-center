@@ -31,6 +31,25 @@ const weighbridgeEvents = require('../state/weighbridgeEvents');
 const { buildCovenants } = require('./covenants');
 const roster = require('../state/roster');
 const haulers = require('../mock/haulers');
+const db = require('../db');
+
+let _stmtRealAlerts = null;
+function stmtRealAlerts() {
+  if (!_stmtRealAlerts) {
+    _stmtRealAlerts = db.prepare(`
+      SELECT s.alert_id, s.severity, s.rule_id, s.vehicle_id, s.hauler_id,
+             s.updated_at, s.status_override,
+             r.rule_type, r.threshold, r.label AS rule_label
+      FROM alert_state s
+      LEFT JOIN alert_rules r ON r.id = s.rule_id
+      WHERE s.rule_id IS NOT NULL
+        AND s.resolved_at_iso IS NULL
+      ORDER BY s.updated_at DESC
+      LIMIT 200
+    `);
+  }
+  return _stmtRealAlerts;
+}
 
 const COACHING_COOLDOWN_DAYS = 7;
 const HSE_CLOSEOUT_LOOKBACK_DAYS = 30;
@@ -345,6 +364,52 @@ function synthCovenantBreaches() {
     });
 }
 
+// ── 7. Real-time engine alerts from alert_state ──────────────────────
+// Rows inserted by alertEngine.evaluate() carry rule_id + context columns
+// (migration 011). Each row is surfaced as a triage-able alert so operators
+// can snooze/resolve/assign them like any other alert.
+function synthRealAlerts() {
+  let rows;
+  try { rows = stmtRealAlerts().all(); } catch (_) { return []; }
+  if (!rows.length) return [];
+
+  const nameById = Object.fromEntries(roster.list().map((h) => [h.id, h.display_name]));
+
+  return rows.map((row) => {
+    const sev    = (row.severity ?? 'warning').toUpperCase();
+    const label  = row.rule_label ?? (row.rule_type ?? 'alert').replace(/_/g, ' ');
+    const veh    = row.vehicle_id;
+    const hName  = row.hauler_id ? (nameById[row.hauler_id] ?? row.hauler_id) : null;
+    const who    = veh ?? hName;
+    const title  = who ? `${label} · ${who}` : label;
+    const body   = [
+      `${label} threshold breached.`,
+      veh   ? `Vehicle: ${veh}.`   : null,
+      hName ? `Hauler: ${hName}.`  : null,
+    ].filter(Boolean).join(' ');
+    const status = row.status_override === 'SNOOZED'    ? 'SNOOZED'
+                 : row.status_override === 'MONITORING'  ? 'MONITORING'
+                 : 'NEEDS_ACTION';
+    return {
+      id:        row.alert_id,
+      opened_at: row.updated_at,
+      severity:  sev,
+      type:      row.rule_type ?? 'telemetry_alert',
+      title,
+      hauler_id: row.hauler_id ?? null,
+      asset_ref: row.vehicle_id ?? null,
+      body,
+      impact:    'Real-time telemetry threshold breach. Sustained violations risk SLA and HOS compliance.',
+      action:    'Review vehicle telemetry and contact hauler dispatcher.',
+      status,
+      link:      { label: 'Open fleet map', path: '/fleet' },
+      generated: true,
+      is_live:   true,
+      source:    'alertEngine',
+    };
+  });
+}
+
 function generated(now = Date.now()) {
   return [
     ...synthAxleHolds(now),
@@ -353,6 +418,7 @@ function generated(now = Date.now()) {
     ...synthMaintenance(),
     ...synthIntegrationFailures(),
     ...synthCovenantBreaches(),
+    ...synthRealAlerts(),
   ];
 }
 

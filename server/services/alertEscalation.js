@@ -30,7 +30,7 @@ const stmts = {
   staleAlerts: db.prepare(`
     SELECT alert_id, status_override, updated_at
     FROM alert_state
-    WHERE (status_override IS NULL OR status_override = 'open')
+    WHERE (status_override IS NULL OR status_override IN ('open', 'NEEDS_ACTION', 'MONITORING'))
       AND updated_at < @cutoff
     ORDER BY updated_at ASC
     LIMIT 50
@@ -43,10 +43,10 @@ function run() {
   const cooldown =            nowMs - COOLDOWN_H   * 3_600_000;
 
   const rows = stmts.staleAlerts.all({ cutoff });
-  if (rows.length === 0) return { escalated: 0 };
+  if (rows.length === 0) return { escalated: 0, checked: 0 };
 
   // Find axis_admin recipients.
-  const admins = users.list().filter((u) => u.role === 'axis_admin' && u.active !== false);
+  const admins = users.list().filter((u) => u.role === 'axis_admin' && u.active);
   if (admins.length === 0) return { escalated: 0 };
 
   let escalated = 0;

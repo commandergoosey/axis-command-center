@@ -57,7 +57,7 @@ function getStmts() {
     activeAlerts: db.prepare(`
       SELECT COUNT(*) AS n FROM alert_state
       WHERE severity IN ('critical','high')
-        AND resolved_at IS NULL
+        AND resolved_at_iso IS NULL
     `),
   };
   return stmts;
