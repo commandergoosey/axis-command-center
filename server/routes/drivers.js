@@ -467,12 +467,13 @@ router.get('/:id/hours', (req, res) => {
   const weekEnd    = new Date(weekStart.getTime() + weekMs);
   const prevStart  = new Date(weekStart.getTime() - weekMs);
 
-  const thisWeekTrips = tripStore.list({ status: 'completed' }).filter((t) =>
+  const completedTrips = tripStore.list({ status: 'completed' }).trips;
+  const thisWeekTrips = completedTrips.filter((t) =>
     t.driver_id === driver.id
     && t.departed_at >= weekStart.toISOString()
     && t.departed_at < weekEnd.toISOString(),
   );
-  const prevWeekTrips = tripStore.list({ status: 'completed' }).filter((t) =>
+  const prevWeekTrips = completedTrips.filter((t) =>
     t.driver_id === driver.id
     && t.departed_at >= prevStart.toISOString()
     && t.departed_at < weekStart.toISOString(),

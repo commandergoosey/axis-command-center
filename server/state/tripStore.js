@@ -85,10 +85,10 @@ const stmts = {
   // Recent trips for the metrics aggregator.
   forDateRange: db.prepare(`
     SELECT * FROM trips
-    WHERE hauler_id = @hauler_id
+    WHERE (:hauler_id IS NULL OR hauler_id = :hauler_id)
       AND status = 'completed'
-      AND departed_at >= @from
-      AND departed_at <  @to
+      AND departed_at >= :from
+      AND departed_at <  :to
   `),
 };
 
