@@ -32,7 +32,7 @@ export default function GateChecklist({ tranche }) {
     } catch {
       setRequest(null);
     }
-  }, [tranche?.id]);
+  }, [tranche]);
 
   useEffect(() => { fetchRequest(); }, [fetchRequest]);
 
@@ -485,7 +485,7 @@ function RequestCard({ tranche, user, request, loading, err, setErr, setLoading,
 
 /* ─── Re-submit form (after rejection / info_requested) ─────────── */
 
-function ResubmitForm({ tranche, loading, err, setErr, onRefresh }) {
+function ResubmitForm({ tranche, err, setErr, onRefresh }) {
   const [open, setOpen]     = useState(false);
   const [amount, setAmount] = useState(String(tranche.capex_usd || ''));
   const [notes, setNotes]   = useState('');

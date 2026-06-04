@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Activity, RefreshCw, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Activity, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 import { useAuth } from '../../lib/AuthContext';
 

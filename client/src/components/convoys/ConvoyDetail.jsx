@@ -33,11 +33,6 @@ const REST_TONE = {
   breach:    'pending',
 };
 
-const SEVERITY_TONE = {
-  CRITICAL: 'pending',
-  WARNING:  'degraded',
-  INFO:     'manual',
-};
 
 export default function ConvoyDetail({ convoyId, open, onClose }) {
   const [data,   setData]   = useState(null);

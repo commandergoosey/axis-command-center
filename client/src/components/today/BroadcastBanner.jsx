@@ -10,7 +10,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Megaphone, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Megaphone, ChevronDown, ChevronUp } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 
 const TONE = {

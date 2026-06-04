@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ListChecks, Check, Calendar, ArrowRight } from 'lucide-react';
+import { ListChecks, Check, ArrowRight } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 import { useAuth } from '../../lib/AuthContext';
 

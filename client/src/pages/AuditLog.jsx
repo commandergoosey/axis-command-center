@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { History, Download, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Download, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 

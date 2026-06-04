@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  ShieldCheck, ClipboardList, Wrench, FileCheck2, Users,
+  ShieldCheck, Wrench, FileCheck2, Users,
   AlertOctagon, Bell, Zap, Printer,
 } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
@@ -29,16 +29,6 @@ const ENTITY_ICON = {
   alert:            <Bell         size={12} />,
 };
 
-const ACTION_LABEL = {
-  create:     'logged',
-  close:      'closed',
-  open:       'opened',
-  progress:   'progressed',
-  resolve:    'resolved',
-  renew:      'renewed',
-  mark_filed: 'marked filed',
-  auto_clear: 'auto-cleared',
-};
 
 export default function OperationsLog() {
   const [data, setData]   = useState(null);

@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Clock, Trash2, ChevronDown, ScrollText, PenLine } from 'lucide-react';
+import { Clock, Trash2, ScrollText, PenLine } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';

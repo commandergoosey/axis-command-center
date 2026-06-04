@@ -16,7 +16,7 @@ function formatMonth(key) {
     .toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
 }
 
-function CustomTooltip({ active, payload, label }) {
+function CustomTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
   return (

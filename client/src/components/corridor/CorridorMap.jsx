@@ -11,7 +11,7 @@
  *     Colour: Bauxite Rust (on time) or Amber (delayed). Click for popup.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
@@ -100,14 +100,11 @@ function waypointIcon(kind) {
   };
   const cfg = configs[kind] ?? configs.junction;
   const s   = cfg.size;
-  let shapeStyle = '';
-  if (cfg.shape === 'square') {
-    shapeStyle = `width:${s}px;height:${s}px;background:${cfg.color};border-radius:1px;`;
-  } else if (cfg.shape === 'diamond') {
-    shapeStyle = `width:${s}px;height:${s}px;background:${cfg.color};transform:rotate(45deg);border-radius:1px;`;
-  } else {
-    shapeStyle = `width:${s}px;height:${s}px;background:${cfg.color};border-radius:50%;`;
-  }
+  const shapeStyle = cfg.shape === 'square'
+    ? `width:${s}px;height:${s}px;background:${cfg.color};border-radius:1px;`
+    : cfg.shape === 'diamond'
+      ? `width:${s}px;height:${s}px;background:${cfg.color};transform:rotate(45deg);border-radius:1px;`
+      : `width:${s}px;height:${s}px;background:${cfg.color};border-radius:50%;`;
   const html = `<div style="display:flex;align-items:center;justify-content:center;"><div style="${shapeStyle}border:1.5px solid white;box-shadow:0 1px 3px rgba(0,0,0,.35);"></div></div>`;
   return L.divIcon({ html, iconSize: [s + 4, s + 4], iconAnchor: [(s + 4) / 2, (s + 4) / 2], className: '' });
 }

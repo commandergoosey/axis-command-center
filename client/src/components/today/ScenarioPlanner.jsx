@@ -13,7 +13,7 @@
  * trucks they don't have.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus, X, Save } from 'lucide-react';
 import Modal from '../primitives/Modal';
 import Button from '../primitives/Button';

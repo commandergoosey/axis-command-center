@@ -71,7 +71,7 @@ export default function Trips() {
   useEffect(() => { loadHaulers(); }, [loadHaulers]);
   useEffect(() => { loadTrips(haulerId); }, [haulerId, loadTrips]);
 
-  const allTrips = data?.trips ?? [];
+  const allTrips = useMemo(() => data?.trips ?? [], [data]);
   const filteredTrips = useMemo(() => allTrips.filter((t) => (
     (!direction || t.direction === direction) &&
     (!status    || t.status    === status)

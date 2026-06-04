@@ -6,7 +6,7 @@
 
 import {
   ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
 
 function weekLabel(iso) {

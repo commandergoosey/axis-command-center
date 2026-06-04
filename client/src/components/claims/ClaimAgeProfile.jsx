@@ -58,7 +58,6 @@ function Row({ label, value, color }) {
 export default function ClaimAgeProfile({ ageProfile }) {
   if (!ageProfile?.length) return null;
 
-  const totalOpen = ageProfile.reduce((s, b) => s + b.count, 0);
   const overdueCount = ageProfile
     .filter((b) => b.is_overdue)
     .reduce((s, b) => s + b.count, 0);

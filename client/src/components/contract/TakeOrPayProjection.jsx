@@ -12,7 +12,7 @@
 
 import {
   ComposedChart, Area, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ReferenceLine,
+  CartesianGrid, Tooltip,
   ResponsiveContainer,
 } from 'recharts';
 
@@ -74,9 +74,6 @@ function CustomTooltip({ active, payload, label }) {
 
 export default function TakeOrPayProjection({ projection }) {
   if (!projection || projection.length === 0) return null;
-
-  // Year-end projection values for reference label positioning
-  const last = projection[projection.length - 1];
 
   return (
     <section>

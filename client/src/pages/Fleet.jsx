@@ -80,7 +80,7 @@ export default function Fleet() {
 
   useEffect(() => { load(); }, [load]);
 
-  const trucks = roster.data?.trucks ?? [];
+  const trucks = useMemo(() => roster.data?.trucks ?? [], [roster.data]);
   const haulerOptions = useMemo(() => {
     const seen = new Map();
     for (const t of trucks) {

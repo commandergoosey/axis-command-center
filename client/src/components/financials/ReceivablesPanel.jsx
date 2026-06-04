@@ -11,7 +11,7 @@
  * (no access to /financials).
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Send, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 import { useAuth } from '../../lib/AuthContext';
@@ -156,7 +156,7 @@ function BandChaseLog({ bandId, bandLabel, canWrite, onMutate }) {
   const [followups, setFollowups] = useState(null);
   const [error, setError]         = useState(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const r = await authFetch(`/api/financials/receivables/followups?band=${bandId}`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -165,9 +165,9 @@ function BandChaseLog({ bandId, bandLabel, canWrite, onMutate }) {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [bandId]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [bandId]);
+  useEffect(() => { load(); }, [load]);
 
   const remove = async (id) => {
     setError(null);

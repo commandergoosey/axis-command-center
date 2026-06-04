@@ -10,12 +10,12 @@
  * isn't going to show.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Trash2, Send } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 import { useAuth } from '../../lib/AuthContext';
 
-export default function CommentsThread({ itemId, initialCount, onChange }) {
+export default function CommentsThread({ itemId, onChange }) {
   const { user } = useAuth();
   const [comments, setComments] = useState(null);  // null = loading
   const [draft, setDraft]       = useState('');
@@ -23,7 +23,7 @@ export default function CommentsThread({ itemId, initialCount, onChange }) {
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const r = await authFetch(`/api/today/action-items/${itemId}/comments`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -32,9 +32,9 @@ export default function CommentsThread({ itemId, initialCount, onChange }) {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [itemId]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [itemId]);
+  useEffect(() => { load(); }, [load]);
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   const submit = async (e) => {

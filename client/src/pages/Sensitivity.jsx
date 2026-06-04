@@ -33,7 +33,7 @@ const VERDICT_TONE = {
 export default function Sensitivity() {
   const [inputs, setInputs] = useState({ cedi_pct: 0, diesel_pct: 0, opex_pct: 0 });
   const [data, setData]     = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [error, setError]   = useState(null);
 
   const load = useCallback(() => {

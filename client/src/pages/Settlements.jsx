@@ -18,8 +18,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Wallet, Check, AlertTriangle, X, ChevronDown, ChevronRight,
-  RefreshCw, CheckCircle, Clock,
+  Check, AlertTriangle, X, ChevronDown, ChevronRight,
+  RefreshCw, CheckCircle,
 } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import Modal from '../components/primitives/Modal';
@@ -744,7 +744,6 @@ function AgeingPanel({ ageing }) {
 
 function ResolveDisputeModal({ statement, onClose, onSaved }) {
   const [status, setStatus]   = useState('pending');
-  const [note, setNote]       = useState('');
   const [posting, setPosting] = useState(false);
   const [error, setError]     = useState(null);
 

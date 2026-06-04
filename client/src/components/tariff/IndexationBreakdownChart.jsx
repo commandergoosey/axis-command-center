@@ -16,7 +16,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
 
 const COLOR_FUEL  = 'var(--bauxite-rust)';

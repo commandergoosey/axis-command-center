@@ -162,7 +162,7 @@ export default function LicenceExpiryPipeline({ licencePipeline }) {
       {/* Per-hauler breakdown */}
       {by_hauler.length > 0 && (
         <div style={{ borderTop: '1px solid var(--border-hairline)', paddingTop: 'var(--space-3)' }}>
-          <div style={{ fontSize: 'var(--ts-caption-size)', color: 'var(--text-tertiary)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 9 }}>
+          <div style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 'var(--space-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Per hauler
           </div>
           {by_hauler.map((h, i) => (

@@ -6,7 +6,7 @@
 
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
 
 const TIER_META = {

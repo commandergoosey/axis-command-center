@@ -311,7 +311,7 @@ function SectionLabel({ children, isLast }) {
   );
 }
 
-function Cell({ children, hauler, isLast, lastCell }) {
+function Cell({ children, isLast, lastCell }) {
   return (
     <div style={{
       padding: 'var(--space-3) var(--space-4)',

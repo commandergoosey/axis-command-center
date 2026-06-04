@@ -16,7 +16,6 @@ import { useAuth } from '../lib/AuthContext';
 
 import PageShell from '../components/layout/PageShell';
 import Button from '../components/primitives/Button';
-import StatusBadge from '../components/primitives/StatusBadge';
 import WorkorderDetail         from '../components/maintenance/WorkorderDetail';
 import MaintenanceSchedulePanel from '../components/maintenance/MaintenanceSchedulePanel';
 import IntervalTrackerStrip     from '../components/maintenance/IntervalTrackerStrip';

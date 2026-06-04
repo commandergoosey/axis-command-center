@@ -297,7 +297,7 @@ function ComposeForm({ onCancel, onPosted, onErr }) {
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
       {/* Severity */}
       <div style={{ display: 'flex', gap: 6 }}>
-        {SEV_OPTIONS.map(([val, label]) => (
+        {SEV_OPTIONS.map(([val]) => (
           <button
             key={val}
             type="button"

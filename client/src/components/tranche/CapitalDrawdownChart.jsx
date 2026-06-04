@@ -6,7 +6,7 @@
  */
 
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
+  ComposedChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
 

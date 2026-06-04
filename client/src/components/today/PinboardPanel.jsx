@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Pin, PinOff, Building2, ShieldAlert, AlertTriangle, Phone, FileSignature, ArrowRight,
+  Pin, PinOff, Building2, ShieldAlert, AlertTriangle, Phone, FileSignature,
 } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 

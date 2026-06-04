@@ -62,8 +62,6 @@ export default function TariffSensitivityChart({ sensitivityScenarios }) {
   const maxAbs = Math.max(...sensitivityScenarios.map((s) => Math.abs(s.delta_ebitda_usd ?? 0)), 1);
   const domain = [-(maxAbs * 1.1), maxAbs * 1.1];
 
-  const baseScenario = sensitivityScenarios.find((s) => s.is_base);
-
   return (
     <div style={{
       background: 'var(--surface-raised)',

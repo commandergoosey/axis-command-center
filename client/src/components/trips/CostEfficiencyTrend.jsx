@@ -9,7 +9,7 @@
 
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
 
 function weekLabel(iso) {

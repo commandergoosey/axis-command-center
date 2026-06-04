@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Cpu, Plus, RefreshCw, Copy, Check, ChevronDown, ChevronUp, X, Trash2 } from 'lucide-react';
+import { Cpu, Plus, RefreshCw, Copy, Check, X, Trash2 } from 'lucide-react';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 

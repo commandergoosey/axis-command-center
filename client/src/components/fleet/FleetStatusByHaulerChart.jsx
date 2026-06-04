@@ -8,7 +8,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, LabelList,
+  Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 
 function shortName(display) {

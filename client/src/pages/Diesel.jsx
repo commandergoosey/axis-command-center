@@ -19,7 +19,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
-import { Fuel, ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, CalendarRange } from 'lucide-react';
+import { Fuel, ArrowUpRight, ArrowDownRight, Minus, CalendarRange } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import BurnEfficiencyStrip      from '../components/diesel/BurnEfficiencyStrip';
@@ -114,7 +114,7 @@ export default function Diesel() {
 // ── KPI strip ─────────────────────────────────────────────────────
 
 function KpiStrip({ data }) {
-  const { current_month, current_ghs_per_l, summary, pass_through } = data;
+  const { current_month, current_ghs_per_l, summary } = data;
   return (
     <div style={{
       display: 'grid',
@@ -380,7 +380,7 @@ function PendingReview({ pending, pass, summary }) {
 
 // ── Pass-through card ─────────────────────────────────────────────
 
-function PassThroughCard({ pass, summary }) {
+function PassThroughCard({ pass }) {
   // Visualize the multiplier on the floor..cap range as a horizontal bar.
   const cap   = pass.cap_pct;
   const floor = pass.floor_pct;

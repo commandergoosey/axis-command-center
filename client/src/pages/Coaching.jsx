@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  GraduationCap, Plus, X, AlertCircle, Calendar, Users, Filter,
+  Plus, X,
 } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import Button from '../components/primitives/Button';

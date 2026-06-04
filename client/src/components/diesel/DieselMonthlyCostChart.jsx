@@ -41,7 +41,7 @@ function fmtUsd(v) {
   return `$${v}`;
 }
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (

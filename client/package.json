@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -17,7 +20,17 @@
     "recharts": "^2.13.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^4.3.3",
-    "vite": "^5.4.10"
+    "eslint": "^10.4.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^29.1.1",
+    "vite": "^5.4.10",
+    "vitest": "^4.1.7"
   }
 }

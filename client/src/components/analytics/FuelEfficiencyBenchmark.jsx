@@ -7,7 +7,7 @@
 
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
-  Tooltip, ReferenceLine, ResponsiveContainer, ZAxis, Cell,
+  Tooltip, ReferenceLine, ResponsiveContainer, ZAxis,
 } from 'recharts';
 
 const CORRIDOR_PALETTE = [

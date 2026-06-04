@@ -22,7 +22,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
   ResponsiveContainer, ComposedChart,
 } from 'recharts';
-import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
@@ -539,10 +539,9 @@ function Panel({ title, sub, children }) {
         <span className="eyebrow">{title}</span>
         {sub && (
           <span style={{
-            fontSize: 'var(--ts-caption-size)',
+            fontSize: 10,
             color: C_TERT,
             fontFamily: 'var(--font-mono)',
-            fontSize: 10,
             letterSpacing: '0.04em',
           }}>
             {sub}
@@ -770,7 +769,6 @@ function TodayStat({ label, value }) {
 /* ── Phase 130: Hauler SLA & MTD attainment chart ─────────────────── */
 
 const SLA_REF_COLOR  = 'rgba(46,107,63,0.45)';
-const SLA_WARN_COLOR = 'rgba(217,158,55,0.8)';
 
 function HaulerAttainmentChart({ rows }) {
   if (!rows.length) return null;

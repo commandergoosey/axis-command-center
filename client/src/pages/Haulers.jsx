@@ -41,7 +41,7 @@ export default function Haulers() {
 
   useEffect(() => { load(); }, [load]);
 
-  const allHaulers = state.data?.haulers ?? [];
+  const allHaulers = useMemo(() => state.data?.haulers ?? [], [state.data]);
   // Hauler admins see only their own hauler row; everyone else sees the full roster.
   const haulers = useMemo(() => (
     user?.role === 'hauler_admin'

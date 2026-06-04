@@ -477,7 +477,7 @@ function ProgressBar({ delivered, projected, floor, monthly }) {
 //   - rust solid for snapshots BELOW floor
 //   - text-secondary for snapshots AT/ABOVE floor
 //   - the right-most bar (today) gets a tiny dot below it as a "you are here" tick
-function TrendSparkline({ points, floor, monthly }) {
+function TrendSparkline({ points, floor }) {
   // Y-axis domain: tight around the floor so the trend reads dramatically
   // rather than sitting in the middle of a 0..nameplate canvas.
   const values = points.map((p) => p.eom_tonnes);

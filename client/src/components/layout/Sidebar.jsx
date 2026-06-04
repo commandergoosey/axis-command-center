@@ -107,7 +107,7 @@ const NAV = [
   },
 ];
 
-function visibleFor(role) {
+export function visibleFor(role) {
   return NAV
     .map((section) => ({
       ...section,

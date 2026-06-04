@@ -14,7 +14,7 @@
 
 import {
   ComposedChart, Bar, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, ReferenceLine,
+  CartesianGrid, Tooltip,
   ResponsiveContainer,
 } from 'recharts';
 

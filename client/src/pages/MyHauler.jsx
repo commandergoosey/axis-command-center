@@ -19,8 +19,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Building2, TrendingUp, TrendingDown, Minus, Phone, MessageCircle, Mail, MapPin,
-  Users, ShieldAlert, Wrench, IdCard, AlertTriangle, FileText, ScrollText, ArrowRight,
+  Building2, Phone, MessageCircle, Mail, MapPin,
+  Users, Wrench, IdCard, AlertTriangle, FileText, ScrollText,
 } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import BroadcastBanner from '../components/today/BroadcastBanner';

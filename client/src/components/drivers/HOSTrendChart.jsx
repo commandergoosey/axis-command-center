@@ -29,7 +29,7 @@ function weekLabel(iso) {
   return `${day} ${mon}`;
 }
 
-function CustomTooltip({ active, payload, label }) {
+function CustomTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
   if (!d) return null;

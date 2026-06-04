@@ -430,7 +430,7 @@ export default function Convoys() {
 
   useEffect(() => { load(); }, [load]);
 
-  const allConvoys = data?.convoys ?? [];
+  const allConvoys = useMemo(() => data?.convoys ?? [], [data]);
 
   const haulerOptions = useMemo(() => {
     const seen = new Map();

@@ -12,7 +12,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ReferenceLine, ResponsiveContainer,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
 
 function periodLabel(iso) {

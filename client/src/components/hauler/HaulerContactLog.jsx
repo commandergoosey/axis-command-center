@@ -14,10 +14,10 @@
  * next operator can query.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Phone, MessageCircle, Mail, MapPin, Users,
-  ArrowDownLeft, ArrowUpRight, ChevronDown, Send, Check,
+  ArrowDownLeft, ArrowUpRight, Send, Check,
 } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 import { useAuth } from '../../lib/AuthContext';

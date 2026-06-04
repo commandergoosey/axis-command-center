@@ -354,7 +354,7 @@ function ForecastBlock({ forecast, rank }) {
   );
 }
 
-function LifecycleBlock({ lifecycle, period }) {
+function LifecycleBlock({ lifecycle }) {
   const items = [
     { label: 'HSE incidents logged', value: lifecycle.hse_logged, tone: lifecycle.hse_logged > 0 ? 'amber' : null },
     { label: 'HSE incidents closed', value: lifecycle.hse_closed, tone: 'green' },

@@ -7,7 +7,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
 
 const TIER_META = {

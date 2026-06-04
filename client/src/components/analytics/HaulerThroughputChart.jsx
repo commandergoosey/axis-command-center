@@ -14,8 +14,8 @@
  */
 
 import {
-  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
 
 // Corridor palette — matches HAULER_TONES in Leaderboard.jsx

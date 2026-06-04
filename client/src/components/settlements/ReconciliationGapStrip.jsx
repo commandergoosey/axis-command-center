@@ -22,7 +22,6 @@ function fmtUSD(v) {
   return `$${v}`;
 }
 
-const MAX_GAP_PCT = 4; // clamp bar at ±4 % for legibility
 
 export default function ReconciliationGapStrip({ reconciliation }) {
   if (!reconciliation || reconciliation.length === 0) return null;
@@ -76,7 +75,6 @@ export default function ReconciliationGapStrip({ reconciliation }) {
           const gapColor = isOver   ? 'var(--signal-amber)'
                          : isUnder  ? 'var(--bauxite-rust)'
                          : 'var(--signal-green)';
-          const barWidth = Math.min(100, (Math.abs(r.gap_pct) / MAX_GAP_PCT) * 100);
           const flagged  = Math.abs(r.gap_pct) >= 1.0;
 
           return (

@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, ShieldAlert, RefreshCw, Archive, Edit3, X, ChevronDown, ChevronRight, ListChecks, MessageSquare } from 'lucide-react';
+import { Plus, RefreshCw, Archive, X, ChevronDown, ChevronRight, ListChecks, MessageSquare } from 'lucide-react';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import PageShell from '../components/layout/PageShell';

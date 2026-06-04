@@ -25,6 +25,7 @@ const INTEGRATION_OPTIONS = [
   { value: 'loconav', label: 'Loconav' },
   { value: 'custom',  label: 'Custom (GeoTab etc.)' },
   { value: 'manual',  label: 'Manual / CSV' },
+  { value: 'mqtt',    label: 'MQTT / Telematics Core' },
 ];
 
 /* ── Main panel ──────────────────────────────────────────────────────────── */

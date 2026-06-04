@@ -11,7 +11,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  ResponsiveContainer,
 } from 'recharts';
 
 const PHASE_COLORS = {

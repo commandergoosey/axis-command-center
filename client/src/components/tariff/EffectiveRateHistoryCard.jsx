@@ -14,7 +14,7 @@
  * countdown.
  */
 
-import { TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 export default function EffectiveRateHistoryCard({ history, nextReview, current }) {
   if (!history || history.length === 0) return null;

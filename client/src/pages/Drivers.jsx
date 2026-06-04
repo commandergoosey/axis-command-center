@@ -88,7 +88,7 @@ export default function Drivers() {
 
   useEffect(() => { load(); }, [load]);
 
-  const drivers = roster.data?.drivers ?? [];
+  const drivers = useMemo(() => roster.data?.drivers ?? [], [roster.data]);
 
   const haulerOptions = useMemo(() => {
     const seen = new Map();

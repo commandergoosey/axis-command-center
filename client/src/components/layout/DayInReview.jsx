@@ -14,7 +14,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  TrendingUp, TrendingDown, Minus, X, Inbox, Clock, AlertOctagon, ArrowRight,
+  TrendingUp, TrendingDown, Minus, X, Clock,
   ScrollText,
 } from 'lucide-react';
 import Modal from '../primitives/Modal';

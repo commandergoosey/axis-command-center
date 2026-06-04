@@ -223,7 +223,7 @@ function ScenarioRow({ scenario, baseline, canWrite, onChange }) {
   );
 }
 
-function ScenarioAppliedSummary({ applied, totals, baselineKt }) {
+function ScenarioAppliedSummary({ applied, baselineKt }) {
   if (!applied) return null;
   const lifts = Object.entries(applied.hauler_truck_lifts || {})
     .filter(([, n]) => n > 0)

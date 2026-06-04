@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, X, Wrench, Calendar, CheckSquare, XSquare } from 'lucide-react';
+import { Plus, X, Calendar, CheckSquare, XSquare } from 'lucide-react';
 import { authFetch } from '../../lib/auth';
 import { useAuth } from '../../lib/AuthContext';
 import Modal from '../primitives/Modal';

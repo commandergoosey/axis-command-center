@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ShieldQuestion, Check, X, FileText, ChevronDown, ChevronRight, ExternalLink,
+  Check, X, FileText, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import Modal from '../components/primitives/Modal';

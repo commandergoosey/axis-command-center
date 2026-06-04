@@ -110,7 +110,7 @@ export default function Alerts() {
 
   useEffect(() => { load(); }, [load]);
 
-  const alerts = data?.alerts ?? [];
+  const alerts = useMemo(() => data?.alerts ?? [], [data]);
 
   // Derive hauler options from the current alert set. Null-hauler alerts
   // surface as "Corridor-wide" so they can be filtered the same way.

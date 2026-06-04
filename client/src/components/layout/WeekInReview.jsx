@@ -19,7 +19,7 @@
 
 import { useEffect, useState } from 'react';
 import {
-  X, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight,
+  X, TrendingUp, TrendingDown, Minus, ArrowUpRight,
   CheckCircle2, AlertTriangle, MessagesSquare,
 } from 'lucide-react';
 import Modal from '../primitives/Modal';

@@ -119,7 +119,6 @@ export default function IntegrationPanel({ hauler, onSynced }) {
   }
 
   const hasCreds = state?.has_credentials;
-  const isLive   = state?.live;
 
   return (
     <section style={{ marginBottom: 'var(--space-4)' }}>

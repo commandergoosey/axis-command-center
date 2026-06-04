@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Trophy, Shield, Truck, Clock, AlertTriangle } from 'lucide-react';
+import { Shield, Truck, Clock, AlertTriangle } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
@@ -31,8 +31,6 @@ const MEDAL = {
   2: { label: '2nd', bg: 'rgba(180,180,180,0.10)', border: 'rgba(160,160,160,0.4)', color: 'var(--text-secondary)' },
   3: { label: '3rd', bg: 'rgba(139,99,66,0.10)',  border: 'rgba(139,99,66,0.4)',   color: 'var(--text-tertiary)' },
 };
-
-const MEDAL_NUMERAL = { 1: '①', 2: '②', 3: '③' };
 
 /* ── Hauler pill colours — same palette as sidebar sections ──────── */
 const HAULER_TONES = [

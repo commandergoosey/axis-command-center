@@ -16,10 +16,10 @@
  * Backed by /api/notifications/inbox with paging.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Bell, BellOff, ArrowRight, CheckCheck, Filter,
+  Bell, BellOff, ArrowRight, CheckCheck,
   ChevronLeft, ChevronRight, Send, X, Loader, MessageSquare,
 } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';

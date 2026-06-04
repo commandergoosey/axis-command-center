@@ -7,7 +7,7 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Cell, ReferenceLine, ResponsiveContainer,
+  Tooltip, Cell, ResponsiveContainer,
 } from 'recharts';
 
 const BINS = [

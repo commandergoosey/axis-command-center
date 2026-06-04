@@ -416,7 +416,8 @@ function StatusPanel({ driver, onSaved }) {
     setFlag(driver.flag ?? null);
     setNotes(driver._status_override?.notes ?? '');
     setSaved(false);
-  }, [driver.id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driver.id]); // intentional: reset form only when switching to a different driver
 
   const isDirty = availability !== (driver.availability ?? 'available')
     || restStatus !== (driver.rest_status ?? 'compliant')

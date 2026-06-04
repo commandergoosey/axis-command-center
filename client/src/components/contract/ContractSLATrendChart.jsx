@@ -9,7 +9,7 @@
 
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ReferenceLine, ResponsiveContainer, Dot,
+  Tooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts';
 
 const MODELLED = (

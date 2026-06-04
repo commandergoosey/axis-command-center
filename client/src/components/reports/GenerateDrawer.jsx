@@ -13,10 +13,6 @@ import { authFetch } from '../../lib/auth';
 import { useState, useEffect } from 'react';
 import { X, Download, Send, CheckCircle } from 'lucide-react';
 
-function isoToday() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function defaultLabel(entry) {
   if (!entry) return '';
   const now = new Date();
