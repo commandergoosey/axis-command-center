@@ -464,7 +464,7 @@ try {
 try {
   const _db = require('./db');
   const REQUIRED_TABLES = [
-    'sessions', 'users', 'fleet_trucks', 'drivers', 'trips',
+    'sessions', 'users', 'fleet_trucks', 'fleet_drivers', 'trips',
     'vehicle_positions', 'webhook_events', 'alert_state', 'alert_rules',
     'corridor_health', 'corridor_benchmarks', 'kv_settings',
     'notification_log', 'audit_log',

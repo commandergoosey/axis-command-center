@@ -122,6 +122,12 @@ const upsertStmt = db.prepare(`
 `);
 const byIdStmt = db.prepare('SELECT * FROM settlement_state WHERE settlement_id = ?');
 
+// Dedicated notes UPDATE: bypasses the COALESCE in upsertStmt so null can clear existing notes.
+const setNotesStmt = db.prepare(`
+  UPDATE settlement_state SET notes = ?, updated_at = ?, updated_by_user_id = ?, updated_by_display = ?
+  WHERE settlement_id = ?
+`);
+
 function getOverride(settlement_id) {
   const row = byIdStmt.get(settlement_id);
   return row || null;
@@ -184,20 +190,19 @@ function resolveDispute(settlement_id, { resolution_status = 'pending', by_user_
 }
 
 function setNotes(settlement_id, { notes, by_user_id, by_display }) {
+  const ts = new Date().toISOString();
+  const normalised = notes ? String(notes).slice(0, 2000) : null;
+  // Use upsert to create the row if it doesn't exist yet, then UPDATE
+  // directly so null can clear an existing notes value (COALESCE in upsertStmt
+  // would silently keep the old value when null is passed).
   upsertStmt.run({
     settlement_id,
-    status: null,
-    paid_at: null,
-    paid_amount_usd: null,
-    payment_ref: null,
-    dispute_reason: null,
-    dispute_opened_at: null,
-    dispute_opened_by: null,
-    notes: notes || null,
-    updated_at: new Date().toISOString(),
-    updated_by_user_id: by_user_id || null,
-    updated_by_display: by_display || null,
+    status: null, paid_at: null, paid_amount_usd: null, payment_ref: null,
+    dispute_reason: null, dispute_opened_at: null, dispute_opened_by: null,
+    notes: normalised,
+    updated_at: ts, updated_by_user_id: by_user_id || null, updated_by_display: by_display || null,
   });
+  setNotesStmt.run(normalised, ts, by_user_id || null, by_display || null, settlement_id);
 }
 
 // Apply the overlay to a base settlement record. Caller passes

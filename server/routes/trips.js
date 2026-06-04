@@ -26,11 +26,15 @@ const { ALERTS }   = require('../mock/alerts');
 
 /* ── Normalise a DB trip row into the display shape expected by the client ── */
 function normaliseDbTrip(t, haulersById) {
+  const isEmpty  = t.direction === 'empty';
+  const fuelUsd  = t.estimated_cost_usd ?? 0;
   return {
     id:                   t.id,
     hauler_id:            t.hauler_id,
     hauler_display_name:  haulersById[t.hauler_id] ?? t.hauler_id,
-    direction:            t.direction === 'empty' ? 'northbound' : 'southbound',
+    direction:            isEmpty ? 'northbound' : 'southbound',
+    route_id:             isEmpty ? 'R-N' : 'R-S',
+    route_label:          isEmpty ? 'Takoradi → Nyinahin (N)' : 'Nyinahin → Takoradi (S)',
     origin:               t.origin       ?? null,
     destination:          t.destination  ?? null,
     departed_at:          t.departed_at  ?? null,
@@ -45,6 +49,14 @@ function normaliseDbTrip(t, haulersById) {
     driver_id:            t.driver_id    ?? null,
     source:               t.source,
     status:               t.status,
+    cost: {
+      fuel_usd:   fuelUsd,
+      driver_usd: 0,
+      maint_usd:  0,
+      tolls_usd:  0,
+      total_usd:  fuelUsd,
+    },
+    revenue_usd: 0,
     _real: true,  // marker so the client can distinguish real vs mock trips
   };
 }
@@ -57,9 +69,31 @@ router.get('/', requireAuth, enforceHaulerScope, (req, res) => {
     ? TRIPS.filter((t) => t.hauler_id === haulerId)
     : TRIPS;
 
+  const haulersById = Object.fromEntries(
+    roster.list().map((h) => [h.id, h.display_name]),
+  );
+
+  // Fetch real DB trips for the 7-day analytics window (all haulers).
+  // These are blended into the cost aggregations below; delay-based metrics
+  // (heatmap, SLA, causes) stay mock-only because delay_min is not tracked.
+  let allAnalyticsDbTrips = [];
+  try {
+    const from = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    const to   = new Date().toISOString();
+    allAnalyticsDbTrips = tripStore.forDateRange(null, from, to)
+      .map((t) => normaliseDbTrip(t, haulersById));
+  } catch (_) {}
+  const analyticsDbTrips = haulerId
+    ? allAnalyticsDbTrips.filter((t) => t.hauler_id === haulerId)
+    : allAnalyticsDbTrips;
+
+  // Blended sets: real DB trips supplement mock data for cost aggregations.
+  const analyticsTrips    = [...analyticsDbTrips,    ...filtered];
+  const allAnalyticsTrips = [...allAnalyticsDbTrips, ...TRIPS];
+
   // Cost-per-route: for each route × direction, aggregate cost/revenue/tonnage.
   const byRoute = {};
-  filtered.forEach((t) => {
+  analyticsTrips.forEach((t) => {
     const key = t.route_id;
     if (!byRoute[key]) {
       byRoute[key] = {
@@ -86,10 +120,6 @@ router.get('/', requireAuth, enforceHaulerScope, (req, res) => {
     r.cost_total_usd  += t.cost.total_usd;
     r.revenue_usd     += t.revenue_usd;
   });
-
-  const haulersById = Object.fromEntries(
-    roster.list().map((h) => [h.id, h.display_name]),
-  );
 
   // LP-16 — prepend real DB completed trips at the head of the ledger.
   // Excluded from cost/revenue aggregation (no financial model yet) so the
@@ -122,11 +152,11 @@ router.get('/', requireAuth, enforceHaulerScope, (req, res) => {
   // Real → live convoy → mock (most-recent-first across all sources).
   const trips = [...realTrips, ...liveTrips, ...mockTrips].slice(0, limit);
 
-  // Phase 141 — 12-week rolling cost-efficiency trend. Groups mock trips
+  // Phase 141 — 12-week rolling cost-efficiency trend. Groups trips
   // by ISO week (Monday-based) and computes avg cost/tonne + delay rate
   // per week. The last 12 complete weeks are returned in ascending order.
   const byWeek = {};
-  filtered.forEach((t) => {
+  analyticsTrips.forEach((t) => {
     const d = new Date(t.departed_at ?? t.completed_at ?? 0);
     const mon = new Date(d);
     mon.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); // ISO Mon
@@ -150,10 +180,10 @@ router.get('/', requireAuth, enforceHaulerScope, (req, res) => {
     }));
 
   // Phase 169 — per-hauler trip performance summary.
-  // Groups the full (unfiltered) TRIPS set by hauler_id so the summary
+  // Groups all trips (real DB + mock) by hauler_id so the summary
   // strip shows all haulers regardless of the active hauler filter.
   const byHauler = {};
-  TRIPS.forEach((t) => {
+  allAnalyticsTrips.forEach((t) => {
     if (!byHauler[t.hauler_id]) {
       byHauler[t.hauler_id] = {
         hauler_id:       t.hauler_id,
@@ -254,10 +284,10 @@ router.get('/', requireAuth, enforceHaulerScope, (req, res) => {
   }));
 
   // Phase 214 — per-hauler cost component breakdown: fuel / driver / maint / tolls.
-  // Groups the full TRIPS set by hauler so the totals are independent of the
-  // active page filter. Sorted highest-spend hauler first.
+  // Groups all trips (real DB + mock) by hauler so the totals are independent
+  // of the active page filter. Sorted highest-spend hauler first.
   const compByHauler = {};
-  TRIPS.forEach((t) => {
+  allAnalyticsTrips.forEach((t) => {
     if (!compByHauler[t.hauler_id]) {
       compByHauler[t.hauler_id] = {
         hauler_id:   t.hauler_id,
@@ -450,6 +480,72 @@ router.get('/live', requireAuth, enforceHaulerScope, (req, res) => {
   }
 });
 
+/* ═══════════════════════════════════════════════════════════════════
+ * LP-52 — Trip CSV export.
+ *
+ * GET /api/trips/export.csv
+ *
+ * Streams real DB trips as CSV. Up to 5,000 rows per export.
+ * Only covers trips sourced from the DB (webhook events, manual
+ * entry, FMS polling) — not the seeded mock fixtures.
+ *
+ * Query params:
+ *   hauler_id — filter to one hauler
+ *   status    — 'completed' | 'in_progress' (default: all)
+ *   since     — ISO timestamp lower bound on departed_at
+ *   until     — ISO timestamp upper bound on departed_at
+ *
+ * Access: axis_admin, axis_ops. Hauler admins use the scoped
+ * /api/trips list instead.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+const _db = require('../db');
+
+router.get('/export.csv', requireRole('axis_admin', 'axis_ops'), (req, res) => {
+  const hauler_id = req.query.hauler_id || null;
+  const status    = req.query.status    || null;
+  const since     = req.query.since     || null;
+  const until     = req.query.until     || null;
+
+  const conditions = [
+    hauler_id ? `hauler_id = '${hauler_id.replace(/'/g, "''")}'`   : null,
+    status    ? `status    = '${status.replace(/'/g, "''")}'`       : null,
+    since     ? `departed_at >= '${since.replace(/'/g, "''")}'`     : null,
+    until     ? `departed_at <= '${until.replace(/'/g, "''")}'`     : null,
+  ].filter(Boolean);
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const rows  = _db.prepare(
+    `SELECT id, hauler_id, vehicle_id, driver_id, status, direction,
+            origin, destination, departed_at, arrived_at, duration_min,
+            distance_km, tonnage_t, axle_load_pct,
+            estimated_fuel_l, estimated_cost_usd, convoy_id, source, created_at
+     FROM trips ${where}
+     ORDER BY departed_at DESC
+     LIMIT 5000`,
+  ).all();
+
+  const datePart = new Date().toISOString().slice(0, 10);
+  const filename = `axis-trips${hauler_id ? `-${hauler_id}` : ''}-${datePart}.csv`;
+
+  res.setHeader('Content-Type',        'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.write('﻿'); // UTF-8 BOM for Excel
+
+  const cols = [
+    'id', 'hauler_id', 'vehicle_id', 'driver_id', 'status', 'direction',
+    'origin', 'destination', 'departed_at', 'arrived_at', 'duration_min',
+    'distance_km', 'tonnage_t', 'axle_load_pct',
+    'estimated_fuel_l', 'estimated_cost_usd', 'convoy_id', 'source', 'created_at',
+  ];
+  res.write(cols.join(',') + '\n');
+
+  for (const r of rows) {
+    res.write(cols.map((c) => csvCell(r[c])).join(',') + '\n');
+  }
+  res.end();
+});
+
 // ── Detail ─────────────────────────────────────────────────────────
 //   GET /api/trips/:id — full trip detail with synthesised GPS timeline,
 //   weighbridge events for laden runs, assigned rig + driver, and any
@@ -582,72 +678,6 @@ function buildWeighbridgeEvents(trip) {
       };
     });
 }
-
-/* ═══════════════════════════════════════════════════════════════════
- * LP-52 — Trip CSV export.
- *
- * GET /api/trips/export.csv
- *
- * Streams real DB trips as CSV. Up to 5,000 rows per export.
- * Only covers trips sourced from the DB (webhook events, manual
- * entry, FMS polling) — not the seeded mock fixtures.
- *
- * Query params:
- *   hauler_id — filter to one hauler
- *   status    — 'completed' | 'in_progress' (default: all)
- *   since     — ISO timestamp lower bound on departed_at
- *   until     — ISO timestamp upper bound on departed_at
- *
- * Access: axis_admin, axis_ops. Hauler admins use the scoped
- * /api/trips list instead.
- * ═══════════════════════════════════════════════════════════════════ */
-
-const _db = require('../db');
-
-router.get('/export.csv', requireRole('axis_admin', 'axis_ops'), (req, res) => {
-  const hauler_id = req.query.hauler_id || null;
-  const status    = req.query.status    || null;
-  const since     = req.query.since     || null;
-  const until     = req.query.until     || null;
-
-  const conditions = [
-    hauler_id ? `hauler_id = '${hauler_id.replace(/'/g, "''")}'`   : null,
-    status    ? `status    = '${status.replace(/'/g, "''")}'`       : null,
-    since     ? `departed_at >= '${since.replace(/'/g, "''")}'`     : null,
-    until     ? `departed_at <= '${until.replace(/'/g, "''")}'`     : null,
-  ].filter(Boolean);
-
-  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-  const rows  = _db.prepare(
-    `SELECT id, hauler_id, vehicle_id, driver_id, status, direction,
-            origin, destination, departed_at, arrived_at, duration_min,
-            distance_km, tonnage_t, axle_load_pct,
-            estimated_fuel_l, estimated_cost_usd, convoy_id, source, created_at
-     FROM trips ${where}
-     ORDER BY departed_at DESC
-     LIMIT 5000`,
-  ).all();
-
-  const datePart = new Date().toISOString().slice(0, 10);
-  const filename = `axis-trips${hauler_id ? `-${hauler_id}` : ''}-${datePart}.csv`;
-
-  res.setHeader('Content-Type',        'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  res.write('﻿'); // UTF-8 BOM for Excel
-
-  const cols = [
-    'id', 'hauler_id', 'vehicle_id', 'driver_id', 'status', 'direction',
-    'origin', 'destination', 'departed_at', 'arrived_at', 'duration_min',
-    'distance_km', 'tonnage_t', 'axle_load_pct',
-    'estimated_fuel_l', 'estimated_cost_usd', 'convoy_id', 'source', 'created_at',
-  ];
-  res.write(cols.join(',') + '\n');
-
-  for (const r of rows) {
-    res.write(cols.map((c) => csvCell(r[c])).join(',') + '\n');
-  }
-  res.end();
-});
 
 function csvCell(value) {
   const s = String(value ?? '');

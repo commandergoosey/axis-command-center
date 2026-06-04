@@ -46,6 +46,7 @@ function processOne(evt) {
     payload = JSON.parse(evt.raw_json);
   } catch {
     log.warn('Event processor: invalid JSON in webhook_events', { id: evt.id });
+    stmts.markFailed.run(evt.id); // malformed JSON will never parse; mark permanently failed
     return false;
   }
 
@@ -374,7 +375,12 @@ function processIds(ids) {
   const rows = db.prepare(
     `SELECT * FROM webhook_events WHERE id IN (${placeholders}) AND processed = 0`,
   ).all(...ids);
-  for (const row of rows) processOne(row);
+  // Preserve the caller's ID order so trip_start is always processed before
+  // trip_end when both are passed in the same batch.
+  const rowById = Object.fromEntries(rows.map((r) => [r.id, r]));
+  for (const id of ids) {
+    if (rowById[id]) processOne(rowById[id]);
+  }
 }
 
 module.exports = { processPending, processIds };

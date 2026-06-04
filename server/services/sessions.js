@@ -39,7 +39,7 @@ try { stmts.purgeResets.run(); } catch (_) {} // table may not exist yet on firs
 setInterval(() => {
   stmts.purge.run();
   try { stmts.purgeResets.run(); } catch (_) {}
-}, 60 * 60 * 1000);
+}, 60 * 60 * 1000).unref();
 
 /**
  * Issue a new session token for a user.
