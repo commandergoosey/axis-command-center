@@ -106,7 +106,7 @@ import LenderPack from './pages/LenderPack';
 import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
 import { AuthProvider, useAuth } from './lib/AuthContext';
-import { canAccess } from './lib/auth';
+import Guard from './lib/Guard';
 
 /* Scroll the window to the top on every route change. Without this,
    navigating between pages preserves the previous scroll position. */
@@ -170,21 +170,6 @@ function Shell() {
   );
 }
 
-function Guard({ path, children }) {
-  const { user } = useAuth();
-  if (!user) return null;
-  // Phase 79 — hauler_admin lands on /my-hauler instead of /
-  // (the operator Today page assumes corridor-wide context).
-  if (path === '/' && user.role === 'hauler_admin') {
-    return <Navigate to="/my-hauler" replace />;
-  }
-  // Settings and Audit log are AXIS-admin-only — enforced via capability in lib/auth.
-  if ((path === '/settings' || path === '/audit') && user.role !== 'axis_admin') {
-    return <Navigate to="/" replace />;
-  }
-  if (!canAccess(user.role, path)) return <Navigate to="/" replace />;
-  return children;
-}
 
 function Gate() {
   const { status, user } = useAuth();
