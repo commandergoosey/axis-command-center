@@ -20,7 +20,7 @@
  *   AXIS_WRITE_RATE_LIMIT is set, to avoid breaking dev workflows.
  */
 
-const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
+const { rateLimit } = require('express-rate-limit');
 
 const WRITE_MAX    = parseInt(process.env.USER_WRITE_MAX       ?? '60',     10);
 const WINDOW_MS    = parseInt(process.env.USER_WRITE_WINDOW_MS ?? '900000', 10);
@@ -33,7 +33,7 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders:   false,
   skip:            (req) => !ENABLED || !WRITE_METHODS.has(req.method),
-  keyGenerator:    (req) => req.user ? `user:${req.user.id}` : `ip:${ipKeyGenerator(req)}`,
+  keyGenerator:    (req) => req.user ? `user:${req.user.id}` : `ip:${req.ip ?? 'unknown'}`,
   message:         { error: 'Too many write requests — please slow down' },
 });
 
