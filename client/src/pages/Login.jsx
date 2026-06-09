@@ -17,13 +17,48 @@ const ROLE_LABEL = {
   lender:       'Lender · GIBDLC',
 };
 
+// Static fallback — these are the seeded demo accounts (non-production only).
+// Shown here so the login panel is useful even when the server is in a mode
+// that disables the /api/auth/demo endpoint.  The server endpoint can override
+// these if it returns a richer account list.
+const FALLBACK_ACCOUNTS = [
+  {
+    email:         'admin@axis.gh',
+    password_hint: 'axis-admin-change-me',
+    display_name:  'Akosua Mensah',
+    role:          'axis_admin',
+    organisation:  'AXIS (NewCo Logistics JV)',
+  },
+  {
+    email:         'ops@axis.gh',
+    password_hint: 'axis-ops-change-me',
+    display_name:  'Kwame Boateng',
+    role:          'axis_ops',
+    organisation:  'AXIS Operations',
+  },
+  {
+    email:         'admin@haul-01.gh',
+    password_hint: 'hauler-change-me',
+    display_name:  'Ama Darko',
+    role:          'hauler_admin',
+    organisation:  'Hauler 01',
+  },
+  {
+    email:         'analyst@gibdlc.com',
+    password_hint: 'lender-change-me',
+    display_name:  'Yaw Osei',
+    role:          'lender',
+    organisation:  'GIBDLC — Lender desk',
+  },
+];
+
 export default function Login() {
   const { login } = useAuth();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy]         = useState(false);
   const [error, setError]       = useState(null);
-  const [accounts, setAccounts] = useState([]);
+  const [accounts, setAccounts] = useState(FALLBACK_ACCOUNTS);
 
   // Forgot-password inline form state
   const [resetOpen,    setResetOpen]    = useState(false);
@@ -33,10 +68,13 @@ export default function Login() {
   const [resetError,   setResetError]   = useState(null);
 
   useEffect(() => {
+    // Try to fetch live account hints from the server (may include additional
+    // accounts or updated data). Falls back to FALLBACK_ACCOUNTS if the
+    // endpoint is unreachable or disabled (e.g. NODE_ENV=production).
     fetch(`${API_BASE}/api/auth/demo`)
-      .then((r) => r.json())
-      .then((b) => setAccounts(b.accounts || []))
-      .catch(() => { /* demo endpoint optional */ });
+      .then((r) => { if (r.ok) return r.json(); throw new Error(`${r.status}`); })
+      .then((b) => { if (b.accounts?.length) setAccounts(b.accounts); })
+      .catch(() => { /* server endpoint optional — FALLBACK_ACCOUNTS remain */ });
   }, []);
 
   async function submit(e) {
