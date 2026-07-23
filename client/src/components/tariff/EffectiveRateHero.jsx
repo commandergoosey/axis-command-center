@@ -5,8 +5,10 @@
  */
 
 import ModelledTag from '../primitives/ModelledTag';
+import { usePlainMode } from '../../lib/PlainModeContext';
 
 export default function EffectiveRateHero({ data }) {
+  const { plain } = usePlainMode();
   if (!data) return null;
   const { base, effective_rate_usd_per_tonne, adjustment_pct } = data;
   const adjustmentColor = adjustment_pct >= 0 ? 'var(--bauxite-rust)' : 'var(--signal-green)';
@@ -32,7 +34,9 @@ export default function EffectiveRateHero({ data }) {
         label="Effective tariff"
         value={`$${effective_rate_usd_per_tonne.toFixed(2)}`}
         unit="/ tonne"
-        sub="Current month, billed to GIBDLC"
+        sub={plain
+          ? `What GIBDLC pays per tonne this month, ${adjustment_pct >= 0 ? 'up' : 'down'} ${Math.abs(adjustment_pct).toFixed(2)}% on the base rate`
+          : 'Current month, billed to GIBDLC'}
         highlight
       />
       <Divider />

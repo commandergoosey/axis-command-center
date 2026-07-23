@@ -10,6 +10,8 @@ import { authFetch } from '../lib/auth';
 
 import { useEffect, useState, useCallback } from 'react';
 import PageShell from '../components/layout/PageShell';
+import Term                 from '../components/primitives/Term';
+import PlainIntro           from '../components/primitives/PlainIntro';
 import ProgrammeStrip       from '../components/tranche/ProgrammeStrip';
 import TrancheTimeline      from '../components/tranche/TrancheTimeline';
 import GateChecklist        from '../components/tranche/GateChecklist';
@@ -42,7 +44,15 @@ export default function Tranches() {
     <PageShell
       eyebrow="Capital"
       title="Tranches"
-      description="Modular deployment — 1.0 → 5.0 Mtpa across four CAPEX tranches. $90M total, 70/30 debt/equity. Each tranche draws on the prior's validated run-rate, DSCR headroom, and HSE record."
+      description={(
+        <>
+          Modular deployment — 1.0 → 5.0 <Term id="mtpa" /> across four{' '}
+          <Term id="capex" /> <Term id="tranche" />. $90M total, 70/30
+          debt/equity. Each tranche draws on the prior's validated{' '}
+          <Term id="run-rate" />, <Term id="dscr" /> <Term id="headroom" />,
+          and HSE record.
+        </>
+      )}
     >
       {error && (
         <div style={{
@@ -57,6 +67,15 @@ export default function Tranches() {
           Tranche feed unavailable — {error}
         </div>
       )}
+
+      <PlainIntro>
+        This page tracks how the corridor's capital is released in stages. Rather
+        than borrowing the full $90M at once, the programme draws it down in four
+        steps as haulage capacity grows from 1.0 to 5.0 million tonnes a year. Each
+        step is released only after the previous one has proven it can run at the
+        expected rate, cover its debt safely, and hold its safety record — so
+        lenders release money against results, not promises.
+      </PlainIntro>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <ProgrammeStrip programme={data?.programme} capital={data?.capital} />

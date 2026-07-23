@@ -12,6 +12,8 @@ import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 
 import PageShell from '../components/layout/PageShell';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
 import Button from '../components/primitives/Button';
 import StatusBadge from '../components/primitives/StatusBadge';
 import DriverDetail             from '../components/drivers/DriverDetail';
@@ -106,8 +108,25 @@ export default function Drivers() {
     <PageShell
       eyebrow="Operations"
       title="Drivers"
-      description="Primary + relief roster across every onboarded hauler. 1.55 drivers per rig covers shift rotation, leave, and training. Rest hours roll over Monday 00:00 Africa/Accra."
+      description={(
+        <>
+          Primary + relief roster across every onboarded hauler. 1.55 drivers
+          per rig covers shift rotation, leave, and training. Rest hours roll
+          over Monday 00:00 Africa/Accra. The roster tracks <Term id="hos" />{' '}
+          against a weekly ceiling, flags a <Term id="rest-breach" /> when a
+          driver runs over and is at risk of <Term id="fatigue" />, and rolls
+          each driver's record into a safety <Term id="composite-score" />.
+        </>
+      )}
     >
+      <PlainIntro>
+        This screen lists every driver working the corridor — those assigned to
+        a rig and the relief pool that covers leave and rotation. It shows how
+        many hours each has driven this week, whether any are close to or past
+        their safe limit, and when their licence expires, so a tired or
+        unlicensed driver is caught before they take a load.
+      </PlainIntro>
+
       <SummaryStrip summary={summary} />
 
       <div style={{

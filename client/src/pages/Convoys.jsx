@@ -17,6 +17,8 @@ import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 
 import PageShell from '../components/layout/PageShell';
+import Term                from '../components/primitives/Term';
+import PlainIntro          from '../components/primitives/PlainIntro';
 import ConvoysSummary      from '../components/convoys/ConvoysSummary';
 import ConvoyCorridorStrip  from '../components/convoys/ConvoyCorridorStrip';
 import ConvoyETABoard       from '../components/convoys/ConvoyETABoard';
@@ -457,7 +459,14 @@ export default function Convoys() {
     <PageShell
       eyebrow="Operations"
       title="Convoys"
-      description="Dispatch discipline across all haulers on the line. A full round trip runs 600 km in 13–15 hours; convoys are grouped by departure window and kept together through weighbridges."
+      description={(
+        <>
+          Dispatch discipline across all haulers on the line. A full{' '}
+          <Term id="cycle-time">round trip</Term> runs 600 km in 13–15 hours;
+          convoys are grouped by departure window and kept together through{' '}
+          <Term id="weighbridge">weighbridges</Term>.
+        </>
+      )}
       actions={canDispatch && !dispatching && (
         <button
           type="button"
@@ -493,6 +502,15 @@ export default function Convoys() {
           Convoy feed unavailable — {error}
         </div>
       )}
+
+      <PlainIntro>
+        A convoy is a group of trucks dispatched together and kept in
+        formation through the weighing points on the corridor. This board
+        tracks each one from loading, through the <Term id="laden" /> run
+        south, to the empty <Term id="deadhead" /> return — so dispatch can
+        see at a glance which convoys are on schedule and which are running
+        late.
+      </PlainIntro>
 
       {dispatching && (
         <DispatchForm

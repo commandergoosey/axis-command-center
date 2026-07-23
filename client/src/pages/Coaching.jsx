@@ -15,6 +15,8 @@ import {
   Plus, X,
 } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
 import Button from '../components/primitives/Button';
 import Modal from '../components/primitives/Modal';
 import { authFetch } from '../lib/auth';
@@ -73,9 +75,25 @@ export default function Coaching() {
     <PageShell
       eyebrow="Operations"
       title="Driver coaching"
-      description="Pipeline of drivers needing intervention — flagged for rest breach, coaching due, or past their routine cadence. Log sessions inline; outcomes show up in the recent-sessions log."
+      description={(
+        <>
+          Pipeline of drivers needing intervention — flagged for a{' '}
+          <Term id="rest-breach" />, coaching due, or past their routine
+          cadence. Priority follows the safety <Term id="composite-score" />,
+          recent <Term id="fatigue" /> risk, and <Term id="hos" /> overruns.
+          Log sessions inline; outcomes show up in the recent-sessions log.
+        </>
+      )}
     >
       {error && <div style={errorBox}>Coaching pipeline unavailable — {error}</div>}
+
+      <PlainIntro>
+        This screen lists the drivers who most need a coaching conversation —
+        because they broke a rest rule, their safety record slipped, or too long
+        has passed since their last session. Work down the list, log each
+        session as it is held, and the record feeds back into when that driver
+        is next due.
+      </PlainIntro>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <KpiStrip counts={data?.counts} />

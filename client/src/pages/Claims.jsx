@@ -21,6 +21,8 @@ import {
 import PageShell from '../components/layout/PageShell';
 import Modal from '../components/primitives/Modal';
 import Button from '../components/primitives/Button';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import ClaimsExposureChart   from '../components/claims/ClaimsExposureChart';
@@ -80,9 +82,26 @@ export default function Claims() {
     <PageShell
       eyebrow="Capital"
       title="Insurance claims"
-      description="Claim lifecycle — filed → review → approval → payment — for HSE incidents and rig damage. Insurance recoveries flow through the corridor's cash position; outstanding approved claims are real receivables."
+      description={(
+        <>
+          Claim lifecycle — filed → review → approval → payment — for{' '}
+          <Term id="hse" /> incidents and rig damage. Insurance recoveries flow
+          through the corridor's cash position and feed <Term id="dscr" />;
+          outstanding approved claims are real{' '}
+          <Term id="receivable">receivables</Term>.
+        </>
+      )}
     >
       {error && <div style={errorBox}>Claims feed unavailable — {error}</div>}
+
+      <PlainIntro>
+        This register tracks every insurance claim from the moment it is filed to
+        the moment it is paid. It matters to a lender because money the insurer
+        owes back is cash the business is expecting — an approved-but-unpaid claim
+        is an amount still to arrive, and a denied one is a cost the business
+        carries itself. The panels below show how much is in the pipeline and how
+        long it takes to collect.
+      </PlainIntro>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <KpiStrip counts={data?.counts} />

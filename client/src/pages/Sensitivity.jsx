@@ -21,6 +21,8 @@ import {
   AlertTriangle, ArrowRight,
 } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
 import { authFetch } from '../lib/auth';
 import DSCRWaterfall from '../components/sensitivity/DSCRWaterfall';
 
@@ -63,7 +65,16 @@ export default function Sensitivity() {
     <PageShell
       eyebrow="Capital"
       title="FX & cost sensitivity"
-      description="Quantitative stress-test for the corridor's FX exposure. Move cedi/USD, diesel, or opex inputs and watch DSCR, EBITDA, and tariff effective rate respond live. The corridor's tariff is USD-denominated; ~63% of opex is GHS — this is where the margin equation lives."
+      description={(
+        <>
+          Quantitative <Term id="stress-test" /> for the corridor's FX exposure.
+          Move cedi/USD, diesel, or opex inputs and watch <Term id="dscr" />,{' '}
+          <Term id="ebitda" />, and tariff effective rate respond live — and how
+          much <Term id="headroom" /> stays above the <Term id="covenant" /> floor.
+          The corridor's tariff is USD-denominated; ~63% of opex is GHS — this is
+          where the margin equation lives.
+        </>
+      )}
       actions={
         <button
           type="button"
@@ -81,6 +92,15 @@ export default function Sensitivity() {
           Sensitivity feed unavailable — {error}
         </div>
       )}
+
+      <PlainIntro>
+        This screen answers a "what if" question: if the cedi weakens, diesel
+        jumps, or costs run hotter than planned, does the business still earn
+        enough to repay its loans safely? Move the sliders and every figure below
+        recomputes end-to-end, so the effect on loan cover and margin is visible
+        before any of it happens for real. Lenders use it to test how much shock
+        the corridor can absorb.
+      </PlainIntro>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         {data && <PresetRow presets={data.presets} inputs={inputs} onApply={applyPreset} />}
