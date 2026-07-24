@@ -61,9 +61,10 @@ export default function DSCRHero({ dscr }) {
         }}>
           {plain ? (
             <>
-              Earnings currently cover the loan repayments {dscr.current.toFixed(2)}× over.
-              Anything above 1.0× means the loan is comfortably covered; the agreed floor
-              is {dscr.target_min.toFixed(2)}×, and the business sits {dscr.headroom_pct.toFixed(1)}% above it today.
+              Right now, earnings cover the loan repayments {dscr.current.toFixed(2)}× —
+              anything above 1.0× means the loan is comfortably covered. The agreed floor
+              is {dscr.target_min.toFixed(2)}×, and the business sits {Math.abs(dscr.headroom_pct).toFixed(1)}%{' '}
+              {dscr.headroom_pct >= 0 ? 'above' : 'below'} it today.
             </>
           ) : (
             <>
