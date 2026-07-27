@@ -63,6 +63,7 @@ export default function Term({ id, children, expand: expandProp }) {
     <span ref={wrapRef} style={{ position: 'relative', display: 'inline' }}>
       <button
         type="button"
+        className="term-affordance"
         aria-expanded={open}
         aria-describedby={open ? popId : undefined}
         onClick={() => setOpen((v) => !v)}
@@ -86,6 +87,7 @@ export default function Term({ id, children, expand: expandProp }) {
         {inline}
         <span
           aria-hidden="true"
+          className="term-dot"
           style={{
             display: 'inline-flex',
             alignItems: 'center',

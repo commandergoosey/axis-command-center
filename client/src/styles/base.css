@@ -89,6 +89,10 @@ button {
     background: #fff !important;
   }
   .no-print { display: none !important; }
+  /* On paper the info affordance is meaningless — a term keeps its
+     inline expansion (in plain mode) but drops the dot and underline. */
+  .term-dot { display: none !important; }
+  .term-affordance { border-bottom: none !important; cursor: auto !important; }
   @page {
     margin: 14mm 12mm;
     size: A4;

@@ -20,6 +20,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { authFetch } from '../lib/auth';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
+import PlainToggle from '../components/primitives/PlainToggle';
 
 const VERDICT_LABEL = {
   on_pace:           'On pace',
@@ -61,6 +64,14 @@ export default function HaulerScorecard() {
     <Frame>
       <PrintBar />
       <Letterhead data={data} />
+      <PlainIntro>
+        How to read this card: it is one haulage company&rsquo;s week on the
+        corridor, set against what its contract requires. The numbers cover
+        trips run, tonnes carried, margin earned and the share of loads
+        delivered on time. The forecast shows where the month is heading, and
+        the safety and lifecycle lines record any incidents, coaching and
+        licence work in the window.
+      </PlainIntro>
       <WeekKPIs week={data.week} />
       <DailyTonnage daily={data.week.daily} />
       {data.forecast && (
@@ -105,22 +116,25 @@ function PrintBar() {
       color: 'var(--text-secondary)',
     }}>
       <span>Cmd-P / Ctrl-P to save as PDF</span>
-      <button
-        type="button"
-        onClick={() => window.print()}
-        style={{
-          padding: '4px 12px',
-          background: 'var(--bauxite-rust)',
-          color: 'var(--bone)',
-          border: 'none',
-          borderRadius: 'var(--radius-sm)',
-          fontSize: 'var(--ts-caption-size)',
-          cursor: 'pointer',
-          fontFamily: 'inherit',
-        }}
-      >
-        Print
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <PlainToggle />
+        <button
+          type="button"
+          onClick={() => window.print()}
+          style={{
+            padding: '4px 12px',
+            background: 'var(--bauxite-rust)',
+            color: 'var(--bone)',
+            border: 'none',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: 'var(--ts-caption-size)',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          Print
+        </button>
+      </div>
     </div>
   );
 }
@@ -223,7 +237,7 @@ function WeekKPIs({ week }) {
           tone={week.margin_usd >= 0 ? null : 'rust'}
         />
         <Kpi
-          label="On-time"
+          label={<><Term id="sla">On-time</Term></>}
           value={week.on_time_pct != null ? `${week.on_time_pct.toFixed(1)}%` : '—'}
           sub={week.delayed > 0 ? `${week.delayed} delayed` : 'clean week'}
           tone={week.on_time_pct != null && week.on_time_pct < 90 ? 'amber' : (week.on_time_pct === 100 ? 'green' : null)}
@@ -261,7 +275,7 @@ function Kpi({ label, value, sub, tone }) {
 function DailyTonnage({ daily }) {
   const max = Math.max(1, ...daily.map((d) => d.tonnes));
   return (
-    <Section title="Daily tonnage" sub="Bar height = tonnes laden delivered. Empty bar = no laden trips that day.">
+    <Section title="Daily tonnage" sub={<>Bar height = tonnes <Term id="laden">laden</Term> delivered. Empty bar = no laden trips that day.</>}>
       <div style={{
         display: 'grid',
         gridTemplateColumns: `repeat(${daily.length}, 1fr)`,
@@ -327,7 +341,7 @@ function ForecastBlock({ forecast, rank }) {
               : forecast.verdict === 'on_pace' ? 'green' : null}
         />
         <Kpi
-          label="Run rate"
+          label={<><Term id="run-rate">Run rate</Term></>}
           value={`${forecast.projected_pct_contracted.toFixed(0)}%`}
           sub={verdictLabel}
           tone={forecast.verdict === 'severely_lagging' ? 'rust'
@@ -356,10 +370,10 @@ function ForecastBlock({ forecast, rank }) {
 
 function LifecycleBlock({ lifecycle }) {
   const items = [
-    { label: 'HSE incidents logged', value: lifecycle.hse_logged, tone: lifecycle.hse_logged > 0 ? 'amber' : null },
-    { label: 'HSE incidents closed', value: lifecycle.hse_closed, tone: 'green' },
-    { label: 'Coaching sessions held', value: lifecycle.coaching_held },
-    { label: 'Licences renewed', value: lifecycle.licences_renewed },
+    { key: 'hse-logged', label: <><Term id="hse">HSE</Term> incidents logged</>, value: lifecycle.hse_logged, tone: lifecycle.hse_logged > 0 ? 'amber' : null },
+    { key: 'hse-closed', label: 'HSE incidents closed', value: lifecycle.hse_closed, tone: 'green' },
+    { key: 'coaching', label: 'Coaching sessions held', value: lifecycle.coaching_held },
+    { key: 'licences', label: 'Licences renewed', value: lifecycle.licences_renewed },
   ];
   const total = items.reduce((s, i) => s + i.value, 0);
   return (
@@ -372,7 +386,7 @@ function LifecycleBlock({ lifecycle }) {
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12,
         }}>
-          {items.map((i) => <Kpi key={i.label} label={i.label} value={i.value} tone={i.tone} />)}
+          {items.map((i) => <Kpi key={i.key} label={i.label} value={i.value} tone={i.tone} />)}
         </div>
       )}
     </Section>

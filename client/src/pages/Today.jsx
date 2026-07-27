@@ -13,6 +13,8 @@ import useEventStream from '../lib/useEventStream';
 
 import { useCallback, useEffect, useState } from 'react';
 
+import Term                    from '../components/primitives/Term';
+import PlainIntro              from '../components/primitives/PlainIntro';
 import HeroPanel               from '../components/today/HeroPanel';
 import DominantStoryCard       from '../components/today/DominantStoryCard';
 import HandoverCard            from '../components/today/HandoverCard';
@@ -85,6 +87,13 @@ export default function Today() {
     >
       {/* ── Left column ─────────────────────────────────────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        <PlainIntro>
+          This is the corridor's morning briefing: what moved yesterday, what
+          needs a decision now, and where each hauler stands. Everything below
+          rolls up the whole line — start here, then open any screen for the
+          detail behind a number.
+        </PlainIntro>
+
         <HeroPanel corridor={snapshot?.corridor} health={snapshot?.health} />
 
         {error && <ErrorStrip message={error} />}
@@ -261,7 +270,8 @@ function LiveOpsStrip({ liveOps }) {
           sub={
             drivers.unavailable > 0
               ? `${drivers.unavailable} off duty`
-              : drivers.flagged === 0 ? 'All clear' : `${drivers.rest_breaches} rest breach${drivers.rest_breaches === 1 ? '' : 'es'}`
+              : drivers.flagged === 0 ? 'All clear'
+              : <>{drivers.rest_breaches} <Term id="rest-breach">rest breach{drivers.rest_breaches === 1 ? '' : 'es'}</Term></>
           }
           tone={drivers.flagged > 0 || drivers.rest_breaches > 0 ? 'warn' : 'ok'}
         />
