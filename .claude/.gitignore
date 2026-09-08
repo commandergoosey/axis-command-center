@@ -1,0 +1,6 @@
+settings.local.json
+worktrees/
+state/
+plans/
+projects/
+hooks/__pycache__/

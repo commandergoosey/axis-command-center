@@ -1,0 +1,12 @@
+{
+  "deny_globs": [
+    ".env",
+    ".env.*",
+    "*.key",
+    "*.pem"
+  ],
+  "deny_prefixes": [
+    "secrets/",
+    ".git/"
+  ]
+}

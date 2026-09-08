@@ -1,0 +1,11 @@
+{
+  "integration_branch": "main",
+  "block_push_targets": ["main", "master"],
+  "block_pr_base_targets": [],
+  "deploy_marker": null,
+  "require_pr_on_first_push": true,
+  "block_main_workspace_branch_creation": true,
+  "main_workspace_allowed_branches": ["main", "master"],
+  "main_workspace_allowed_prefixes": ["prototype/", "landing/"],
+  "block_commit_on_branches": ["main", "master"]
+}
