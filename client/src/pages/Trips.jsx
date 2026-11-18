@@ -12,6 +12,8 @@ import { authFetch } from '../lib/auth';
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import PageShell from '../components/layout/PageShell';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
 import HaulerFilter from '../components/trips/HaulerFilter';
 import CostPerRouteCard from '../components/trips/CostPerRouteCard';
 import DelayHeatmap from '../components/trips/DelayHeatmap';
@@ -89,7 +91,15 @@ export default function Trips() {
     <PageShell
       eyebrow="Operations"
       title="Trips"
-      description="Trip-level economics across the corridor. Costs rolled up per route direction; delay heatmap shows when the line actually bites. Click any trip for its GPS timeline, weighbridge events, and any alerts that cite it."
+      description={(
+        <>
+          Trip-level economics across the corridor. Costs rolled up per route
+          direction; the delay heatmap shows when the line actually bites.
+          Click any trip for its GPS timeline,{' '}
+          <Term id="weighbridge">weighbridge</Term> events, and any alerts
+          that cite it.
+        </>
+      )}
       actions={
         <HaulerFilter value={haulerId} onChange={setHaulerId} haulers={haulers} />
       }
@@ -107,6 +117,14 @@ export default function Trips() {
           Trip feed unavailable — {error}
         </div>
       )}
+
+      <PlainIntro>
+        Every completed run on the corridor, with what it cost and what it
+        earned. A trip is one leg — a loaded <Term id="laden" /> run south or
+        an empty <Term id="deadhead" /> return north. The ledger below tracks
+        on-time performance against the <Term id="sla" /> and the cost of each
+        trip; open any row for its GPS trail and weighing records.
+      </PlainIntro>
 
       {/* LP-20 — live in-progress trips from real FMS/webhook data */}
       <LiveTripFeed haulerId={haulerId} />

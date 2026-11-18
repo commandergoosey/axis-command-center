@@ -9,8 +9,10 @@ import {
   LineChart, Line, XAxis, YAxis, ReferenceLine, ResponsiveContainer, Tooltip,
 } from 'recharts';
 import ModelledTag from '../primitives/ModelledTag';
+import { usePlainMode } from '../../lib/PlainModeContext';
 
 export default function DSCRHero({ dscr }) {
+  const { plain } = usePlainMode();
   if (!dscr) return null;
   const data = dscr.series.map((r) => ({
     month: formatMonth(r.month),
@@ -57,7 +59,18 @@ export default function DSCRHero({ dscr }) {
           marginTop: 14,
           lineHeight: 1.5,
         }}>
-          Target {dscr.target_min.toFixed(2)}× at covenant, {dscr.steady_state.toFixed(1)}× at Year 5 steady state. Trailing 3-month rolling reading, recomputed monthly against lender side letter.
+          {plain ? (
+            <>
+              Right now, earnings cover the loan repayments {dscr.current.toFixed(2)}× —
+              anything above 1.0× means the loan is comfortably covered. The agreed floor
+              is {dscr.target_min.toFixed(2)}×, and the business sits {Math.abs(dscr.headroom_pct).toFixed(1)}%{' '}
+              {dscr.headroom_pct >= 0 ? 'above' : 'below'} it today.
+            </>
+          ) : (
+            <>
+              Target {dscr.target_min.toFixed(2)}× at covenant, {dscr.steady_state.toFixed(1)}× at Year 5 steady state. Trailing 3-month rolling reading, recomputed monthly against lender side letter.
+            </>
+          )}
         </div>
       </div>
 

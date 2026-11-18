@@ -67,6 +67,7 @@ import Sidebar from './components/layout/Sidebar';
 import Topbar from './components/layout/Topbar';
 import DemoBanner from './components/layout/DemoBanner';
 import { SidebarProvider } from './lib/SidebarContext';
+import { PlainModeProvider } from './lib/PlainModeContext';
 import Today from './pages/Today';
 import Corridor from './pages/Corridor';
 import Convoys from './pages/Convoys';
@@ -221,7 +222,9 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <SidebarProvider>
-            <Gate />
+            <PlainModeProvider>
+              <Gate />
+            </PlainModeProvider>
           </SidebarProvider>
         </AuthProvider>
       </BrowserRouter>

@@ -9,6 +9,8 @@ import { authFetch } from '../lib/auth';
 import { useEffect, useState, useCallback } from 'react';
 import { FileText } from 'lucide-react';
 import PageShell           from '../components/layout/PageShell';
+import Term                from '../components/primitives/Term';
+import PlainIntro          from '../components/primitives/PlainIntro';
 import DSCRHero            from '../components/financials/DSCRHero';
 import PnLSnapshot         from '../components/financials/PnLSnapshot';
 import PLTrendChart        from '../components/financials/PLTrendChart';
@@ -44,7 +46,13 @@ export default function Financials() {
     <PageShell
       eyebrow="Capital"
       title="Financials"
-      description="Lender-facing snapshot. Target DSCR ≥ 1.30× at covenant; 2.5× at Year 5 steady state. Print-friendly — this page is the lender pack made live."
+      description={(
+        <>
+          Lender-facing snapshot. Target <Term id="dscr" /> ≥ 1.30× at{' '}
+          <Term id="covenant" />; 2.5× at Year 5 steady state. Print-friendly —
+          this page is the lender pack made live.
+        </>
+      )}
       actions={(
         <a
           href="/lender/pack"
@@ -83,6 +91,15 @@ export default function Financials() {
           Financials feed unavailable — {error}
         </div>
       )}
+
+      <PlainIntro>
+        This page answers the question a lender asks first: does the business
+        earn enough to safely repay its loans? The large figure below is how
+        many times over the cash coming in covers the loan repayments due —
+        anything above 1.0 means the loan is comfortably covered, and the
+        agreed floor here is 1.30. The panels underneath show where the money
+        comes from and where it goes.
+      </PlainIntro>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <DSCRHero dscr={data?.dscr} />

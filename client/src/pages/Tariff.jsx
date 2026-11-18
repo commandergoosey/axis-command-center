@@ -9,6 +9,8 @@ import { authFetch } from '../lib/auth';
 
 import { useEffect, useState, useCallback } from 'react';
 import PageShell from '../components/layout/PageShell';
+import Term              from '../components/primitives/Term';
+import PlainIntro        from '../components/primitives/PlainIntro';
 import EffectiveRateHero from '../components/tariff/EffectiveRateHero';
 import IndexationPanel   from '../components/tariff/IndexationPanel';
 import TrendCard         from '../components/tariff/TrendCard';
@@ -41,7 +43,14 @@ export default function Tariff() {
     <PageShell
       eyebrow="Contract"
       title="Tariff"
-      description="Base tariff $0.08 per tonne-km across the 300 km corridor — $24.00 per tonne delivered. Indexed monthly: 40% fuel (NPA diesel), 30% Ghana CPI (GSS), 30% fixed in USD."
+      description={(
+        <>
+          Base tariff $0.08 per <Term id="tonne-km" /> across the 300 km
+          corridor — $24.00 per tonne delivered.{' '}
+          <Term id="indexation">Indexed</Term> monthly: 40% fuel
+          (<Term id="npa" /> diesel), 30% Ghana <Term id="cpi" /> (<Term id="gss" />), 30% fixed in USD.
+        </>
+      )}
     >
       {error && (
         <div style={{
@@ -56,6 +65,14 @@ export default function Tariff() {
           Tariff feed unavailable — {error}
         </div>
       )}
+
+      <PlainIntro>
+        This page tracks the price the corridor charges to move one tonne of
+        bauxite. The rate is not fixed: it is re-set each month so it keeps
+        pace with diesel prices and inflation, within an agreed band. The
+        panels below show this month's rate, how it is built up, and the cost
+        indices it follows.
+      </PlainIntro>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <EffectiveRateHero data={data} />

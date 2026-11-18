@@ -18,6 +18,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { authFetch } from '../lib/auth';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
+import PlainToggle from '../components/primitives/PlainToggle';
 
 const VERDICT_LABEL = {
   top_tier:  'Top tier',
@@ -62,6 +65,13 @@ export default function DriverScorecard() {
     <Frame>
       <PrintBar />
       <Letterhead data={data} />
+      <PlainIntro>
+        How to read this card: it is one driver&rsquo;s week on the corridor,
+        covering the work done and the safety record behind it. The numbers show
+        trips run, tonnes carried, the share of loads on time and hours at the
+        wheel. The verdict and safety score summarise standing against the fleet,
+        and the rest status records whether driving-hour limits were kept.
+      </PlainIntro>
       <VerdictBanner verdict={data.verdict} restStatus={data.safety.rest_status} />
       <WeekKPIs week={data.week} />
       <SafetyBlock safety={data.safety} />
@@ -98,17 +108,20 @@ function PrintBar() {
       fontSize: 'var(--ts-caption-size)', color: 'var(--text-secondary)',
     }}>
       <span>Cmd-P / Ctrl-P to save as PDF</span>
-      <button
-        type="button"
-        onClick={() => window.print()}
-        style={{
-          padding: '4px 12px',
-          background: 'var(--bauxite-rust)', color: 'var(--bone)',
-          border: 'none', borderRadius: 'var(--radius-sm)',
-          fontSize: 'var(--ts-caption-size)', cursor: 'pointer',
-          fontFamily: 'inherit',
-        }}
-      >Print</button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <PlainToggle />
+        <button
+          type="button"
+          onClick={() => window.print()}
+          style={{
+            padding: '4px 12px',
+            background: 'var(--bauxite-rust)', color: 'var(--bone)',
+            border: 'none', borderRadius: 'var(--radius-sm)',
+            fontSize: 'var(--ts-caption-size)', cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >Print</button>
+      </div>
     </div>
   );
 }
@@ -191,7 +204,7 @@ function VerdictBanner({ verdict, restStatus }) {
         </div>
       </div>
       <div style={{ textAlign: 'right' }}>
-        <div className="micro" style={{ color: 'var(--text-tertiary)', marginBottom: 4 }}>Rest status</div>
+        <div className="micro" style={{ color: 'var(--text-tertiary)', marginBottom: 4 }}><Term id="rest-breach">Rest status</Term></div>
         <div style={{
           fontSize: 16, fontWeight: 'var(--fw-medium)',
           color: REST_TONE[restStatus] ?? 'var(--text)',
@@ -229,10 +242,10 @@ function WeekKPIs({ week }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
         <Kpi label="Trips" value={week.trips} sub={`${week.laden_trips} laden · ${week.delayed} delayed`} />
         <Kpi label="Tonnes" value={week.tonnes.toLocaleString()} sub="laden tonnage" />
-        <Kpi label="On-time" value={week.on_time_pct != null ? `${week.on_time_pct.toFixed(1)}%` : '—'}
+        <Kpi label={<><Term id="sla">On-time</Term></>} value={week.on_time_pct != null ? `${week.on_time_pct.toFixed(1)}%` : '—'}
              sub={week.delayed > 0 ? `${week.delayed} delayed` : 'clean'}
              tone={week.on_time_pct != null && week.on_time_pct < 90 ? 'amber' : null} />
-        <Kpi label="Hours / wk" value={`${week.hours.toFixed(1)} h`}
+        <Kpi label={<><Term id="hos">Hours</Term> / wk</>} value={`${week.hours.toFixed(1)} h`}
              sub={week.harsh_events > 0 ? `${week.harsh_events} harsh events` : 'no harsh events'}
              tone={week.hours > 56 ? 'rust' : week.hours > 48 ? 'amber' : null} />
       </div>
@@ -273,7 +286,7 @@ function SafetyBlock({ safety }) {
                   : 'var(--text-tertiary)';
   return (
     <Section title="Safety score · 8 weeks"
-             sub={`Current ${safety.score} · ${safety.trend_delta >= 0 ? '+' : ''}${safety.trend_delta} pts over last 4 weeks`}>
+             sub={<>Composite <Term id="composite-score">safety score</Term> · current {safety.score} · {safety.trend_delta >= 0 ? '+' : ''}{safety.trend_delta} pts over last 4 weeks</>}>
       <div style={{
         display: 'grid',
         gridTemplateColumns: `repeat(${series.length}, 1fr)`,

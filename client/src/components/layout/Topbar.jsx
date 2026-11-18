@@ -7,6 +7,7 @@ import NotificationBell from './NotificationBell';
 import DayInReview from './DayInReview';
 import WeekInReview from './WeekInReview';
 import QuickSwitcher from './QuickSwitcher';
+import PlainToggle from '../primitives/PlainToggle';
 import { useAuth } from '../../lib/AuthContext';
 
 const ROLE_LABEL = {
@@ -181,6 +182,7 @@ export default function Topbar() {
         </span>
         <span style={{ width: 1, height: 18, background: 'var(--border-soft)' }} aria-hidden="true" />
         <SearchButton onOpen={() => setSearchOpen(true)} />
+        <PlainToggle />
         <WeekInReviewButton />
         <DayInReviewButton />
         <NotificationBell />

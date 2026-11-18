@@ -24,6 +24,9 @@
 
 import { useEffect, useState } from 'react';
 import { authFetch } from '../lib/auth';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
+import PlainToggle from '../components/primitives/PlainToggle';
 
 const ENTITY_LABEL = {
   hse_incident:     'HSE incident',
@@ -65,6 +68,13 @@ export default function TodayDigest() {
     <Frame>
       <PrintBar />
       <Letterhead data={data} />
+      <PlainIntro>
+        How to read this briefing: it is the print version of the daily corridor
+        report, fixed to the start of the day in UTC. It sets out how much ore
+        moved against the contracted minimum, the fleet on the road, the day&rsquo;s
+        dominant story, follow-ups carried to tomorrow and the full log of
+        changes recorded across the corridor.
+      </PlainIntro>
       <CorridorKPIs corridor={data.corridor} />
       <Section title="Dominant story">
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
@@ -174,6 +184,7 @@ function PrintBar() {
       color: 'var(--text-tertiary)',
     }}>
       <span>Cmd-P / Ctrl-P to save as PDF</span>
+      <PlainToggle />
       <button
         type="button"
         onClick={() => window.print()}
@@ -306,9 +317,9 @@ function CorridorKPIs({ corridor }) {
           tone={deliveredPct >= floorPct ? 'green' : 'rust'}
         />
         <Kpi
-          label="Take-or-pay floor"
+          label={<><Term id="take-or-pay">Take-or-pay</Term> floor</>}
           value={`${floorPct.toFixed(0)}%`}
-          sub={`Run-rate ${deliveredPct.toFixed(1)}%`}
+          sub={<><Term id="run-rate">Run-rate</Term> {deliveredPct.toFixed(1)}%</>}
           tone={deliveredPct >= floorPct ? 'green' : 'rust'}
         />
         <Kpi
@@ -317,7 +328,7 @@ function CorridorKPIs({ corridor }) {
           sub={`of ${corridor.contracted_trucks} contracted`}
         />
         <Kpi
-          label="On-time SLA"
+          label={<>On-time <Term id="sla">SLA</Term></>}
           value={`${corridor.sla_attainment_pct?.toFixed?.(1) ?? '—'}%`}
         />
       </div>

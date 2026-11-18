@@ -23,6 +23,9 @@
 
 import { Fragment, useEffect, useState } from 'react';
 import { authFetch } from '../lib/auth';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
+import PlainToggle from '../components/primitives/PlainToggle';
 
 const STATUS_TONE = {
   PASS:   'var(--signal-green)',
@@ -62,6 +65,15 @@ export default function LenderPack() {
     <Frame>
       <PrintBar />
       <Letterhead data={data} />
+      <PlainIntro>
+        How to read this pack: it sets out whether the corridor is earning
+        enough to repay its lenders safely. The headline figure is loan cover —
+        the cash the business earns divided by the loan repayments due, where
+        above 1.0× means the loan is covered. The sections that follow show the
+        loan conditions being met, money owed to the business and how overdue it
+        is, and how much ore is on track to move this month against the
+        contracted minimum.
+      </PlainIntro>
       <ExecSummary summary={data.executive_summary} period={data.period} />
       <DscrBlock dscr={data.dscr} />
       <CovenantsBlock covenants={data.covenants} />
@@ -110,7 +122,9 @@ function PrintBar() {
       color: 'var(--text-secondary)',
     }}>
       <span>Cmd-P / Ctrl-P to save as PDF</span>
-      <button
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <PlainToggle />
+        <button
         type="button"
         onClick={() => window.print()}
         style={{
@@ -126,6 +140,7 @@ function PrintBar() {
       >
         Print
       </button>
+      </div>
     </div>
   );
 }
@@ -154,7 +169,7 @@ function Letterhead({ data }) {
           </h1>
           <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
             Offtaker {data.corridor.offtaker} · {data.corridor.contracted_trucks} contracted /{' '}
-            {data.corridor.active_trucks} active · take-or-pay floor {data.corridor.take_or_pay_floor_pct}%
+            {data.corridor.active_trucks} active · <Term id="take-or-pay" /> floor {data.corridor.take_or_pay_floor_pct}%
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>

@@ -24,6 +24,8 @@ import {
 import PageShell from '../components/layout/PageShell';
 import Modal from '../components/primitives/Modal';
 import Button from '../components/primitives/Button';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
 import SettlementAgeingStrip   from '../components/settlements/SettlementAgeingStrip';
 import PaymentVelocityChart    from '../components/settlements/PaymentVelocityChart';
 import ReconciliationGapStrip  from '../components/settlements/ReconciliationGapStrip';
@@ -108,7 +110,16 @@ export default function Settlements() {
     <PageShell
       eyebrow="Capital"
       title="Settlements"
-      description="Per-hauler invoices for their share of corridor revenue. Distinct from receivables (GIBDLC → AXIS); this is AXIS → hauler. Mark paid, dispute, resolve."
+      description={(
+        <>
+          Per-hauler <Term id="settlement" /> statements for each hauler's share
+          of corridor revenue. Distinct from{' '}
+          <Term id="receivable">receivables</Term> (GIBDLC → AXIS); this is
+          AXIS → hauler. Track <Term id="ageing-bucket">ageing</Term>,{' '}
+          <Term id="reconciliation" /> gaps, and <Term id="dso" />; mark paid,
+          dispute, resolve.
+        </>
+      )}
       actions={canMarkPaid && (
         <button type="button" onClick={generateFortnightly} disabled={generating} style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -126,6 +137,14 @@ export default function Settlements() {
       )}
     >
       {error && <div style={errorBox}>Settlements feed unavailable — {error}</div>}
+
+      <PlainIntro>
+        This page is the record of what AXIS owes each hauler for the tonnes they
+        moved, statement by statement. It is the paying-out side of the ledger —
+        the mirror of receivables, which is the money coming in. The panels show
+        how much is still outstanding, how overdue it is, and how long payment
+        typically takes, so nothing owed to a hauler slips out of sight.
+      </PlainIntro>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         {genResult && (

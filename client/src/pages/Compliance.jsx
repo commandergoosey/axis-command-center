@@ -8,6 +8,8 @@ import { authFetch } from '../lib/auth';
 
 import { useEffect, useState, useCallback } from 'react';
 import PageShell          from '../components/layout/PageShell';
+import Term               from '../components/primitives/Term';
+import PlainIntro         from '../components/primitives/PlainIntro';
 import AxleLoadSummary    from '../components/compliance/AxleLoadSummary';
 import AxleEventsTable    from '../components/compliance/AxleEventsTable';
 import CoachingLog        from '../components/compliance/CoachingLog';
@@ -43,7 +45,14 @@ export default function Compliance() {
     <PageShell
       eyebrow="Operations"
       title="Compliance"
-      description="Axle-load compliance under LI 2180 (60-tonne GVW, ~40-tonne payload). Weighbridge events, HSE incidents per million tonne-km, driver licence expiry pipeline, and regulatory filing status."
+      description={(
+        <>
+          <Term id="axle-load" /> compliance under <Term id="li-2180" />{' '}
+          (60-tonne <Term id="gvw" />, ~40-tonne payload). <Term id="weighbridge" />{' '}
+          events, <Term id="hse" /> incidents per million tonne-km, driver licence
+          expiry pipeline, and regulatory filing status.
+        </>
+      )}
     >
       {error && (
         <div style={{
@@ -58,6 +67,14 @@ export default function Compliance() {
           Compliance feed unavailable — {error}
         </div>
       )}
+
+      <PlainIntro>
+        Every rig on the corridor has to stay under the legal weight limit and
+        run with a valid driver licence. Break either rule and a load can be
+        held at the weighbridge or draw a regulator penalty. This page tracks
+        overloading events, safety incidents, licences coming up for renewal,
+        and the filings owed to the authorities.
+      </PlainIntro>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <div style={{

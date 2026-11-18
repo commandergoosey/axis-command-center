@@ -21,6 +21,8 @@ import {
 } from 'recharts';
 import { Fuel, ArrowUpRight, ArrowDownRight, Minus, CalendarRange } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
 import { authFetch } from '../lib/auth';
 import BurnEfficiencyStrip      from '../components/diesel/BurnEfficiencyStrip';
 import HaulerBurnVarianceChart  from '../components/diesel/HaulerBurnVarianceChart';
@@ -46,8 +48,24 @@ export default function Diesel() {
     <PageShell
       eyebrow="Tariff"
       title="Diesel watch"
-      description="The corridor's biggest cost variable. NPA monthly pump price, what it's doing to the indexation formula, and what's queued for the next tariff review on the 1st."
+      description={(
+        <>
+          The corridor's biggest cost variable. <Term id="npa" /> monthly pump
+          price, what it's doing to the <Term id="indexation" /> formula, and
+          what's queued for the next tariff review on the 1st.
+        </>
+      )}
     >
+      <PlainIntro>
+        Diesel is the single largest cost of moving ore on this corridor. Most
+        of any fuel-price rise is{' '}
+        <Term id="pass-through">passed through</Term> to the customer in the
+        monthly rate, so the tariff tracks the national pump price rather than
+        eroding the haulier's margin. This screen shows where fuel has been,
+        where the next monthly reset is heading, and which haulers burn more
+        than the corridor average.
+      </PlainIntro>
+
       {error && <div style={errorBox}>Diesel watch unavailable — {error}</div>}
       {!data && !error && <div style={emptyBox}>Loading…</div>}
 

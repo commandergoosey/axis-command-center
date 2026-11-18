@@ -24,6 +24,8 @@ import {
 } from 'recharts';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import PageShell from '../components/layout/PageShell';
+import Term from '../components/primitives/Term';
+import PlainIntro from '../components/primitives/PlainIntro';
 import { authFetch } from '../lib/auth';
 import { useAuth } from '../lib/AuthContext';
 import HaulerThroughputChart   from '../components/analytics/HaulerThroughputChart';
@@ -124,9 +126,25 @@ export default function Analytics() {
     <PageShell
       eyebrow="Corridor"
       title="Performance analytics"
-      description={`12-week trailing view of corridor throughput vs the GIBDLC take-or-pay contract minimum (${fmt(c.annual_floor_t ?? 800_000)} t floor · ${fmt(c.annual_target_t ?? 1_000_000)} t target). Data is modelled.`}
+      description={(
+        <>
+          12-week trailing view of corridor <Term id="throughput" /> against
+          the <Term id="gibdlc" /> <Term id="take-or-pay" /> contract minimum
+          ({fmt(c.annual_floor_t ?? 800_000)} t floor ·{' '}
+          {fmt(c.annual_target_t ?? 1_000_000)} t target). Data is modelled.
+        </>
+      )}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+
+        <PlainIntro>
+          This screen answers a single question: is the corridor moving enough
+          ore to satisfy the contract? Because the buyer pays for a minimum
+          tonnage whether or not it ships, staying above that floor matters.
+          The panels below track the volume delivered so far, the projected
+          annual <Term id="run-rate" />, and how each hauler contributes toward
+          the target.
+        </PlainIntro>
 
         {error && (
           <div style={{

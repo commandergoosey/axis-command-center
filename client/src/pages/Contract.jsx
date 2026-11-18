@@ -9,6 +9,8 @@ import { authFetch } from '../lib/auth';
 
 import { useEffect, useState, useCallback } from 'react';
 import PageShell from '../components/layout/PageShell';
+import Term                   from '../components/primitives/Term';
+import PlainIntro             from '../components/primitives/PlainIntro';
 import ContractTermsStrip    from '../components/contract/ContractTermsStrip';
 import TakeOrPayGauge        from '../components/contract/TakeOrPayGauge';
 import CumulativeTonnageChart from '../components/contract/CumulativeTonnageChart';
@@ -41,7 +43,14 @@ export default function Contract() {
     <PageShell
       eyebrow="Contract"
       title="GIBDLC contract"
-      description="Haulage contract with GIBDLC under GIADEC oversight. Minimum take-or-pay at 80% of contracted monthly tonnage. Payment security via standby letter of credit."
+      description={(
+        <>
+          Haulage contract with <Term id="gibdlc" /> under <Term id="giadec" />{' '}
+          oversight. Minimum <Term id="take-or-pay" /> at 80% of contracted
+          monthly tonnage. <Term id="payment-security" /> via standby letter of
+          credit.
+        </>
+      )}
     >
       {error && (
         <div style={{
@@ -56,6 +65,14 @@ export default function Contract() {
           Contract feed unavailable — {error}
         </div>
       )}
+
+      <PlainIntro>
+        This page tracks the single contract the whole corridor runs on: the
+        agreement to haul bauxite for GIBDLC. It shows whether this month's
+        tonnage is clearing the guaranteed minimum the buyer must pay for
+        whether or not it ships, whether on-time service standards are being
+        met, and how the haulier's payment is secured against a default.
+      </PlainIntro>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <ContractTermsStrip terms={data?.terms} basis={data?.contract_basis} />
